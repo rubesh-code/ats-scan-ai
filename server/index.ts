@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -123,6 +123,74 @@ function hashOtp(email: string, otp: string) {
     .update(`${normalizeEmail(email)}:${otp}:${secret}`)
     .digest("hex");
 }
+
+function buildOtpEmailHtml(otp: string) {
+  return `
+    <div style="font-family: Arial, sans-serif; background: #f8fafc; padding: 24px;">
+      <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px;">
+        <div style="font-size: 14px; font-weight: 700; color: #2563eb; letter-spacing: 0.08em; text-transform: uppercase;">
+          ATS Scan AI
+        </div>
+
+        <h2 style="margin: 14px 0 8px; color: #0f172a;">Your verification code</h2>
+
+        <p style="margin: 0 0 18px; color: #475569;">
+          Use this OTP to sign in to your ATS Scan AI account.
+        </p>
+
+        <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f172a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 18px; text-align: center;">
+          ${otp}
+        </div>
+
+        <p style="margin: 18px 0 0; color: #64748b; font-size: 14px;">
+          This code expires in 5 minutes. If you did not request this, you can safely ignore this email.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+async function sendOtpEmail(email: string, otp: string) {
+  const smtpHost = process.env.SMTP_HOST || "smtp.sendgrid.net";
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpSecure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+
+  const smtpUser = process.env.SMTP_USER || "apikey";
+  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+  const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+
+  if (!smtpPass || !emailFrom) {
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[DEV OTP] ${email}: ${otp}`);
+      return;
+    }
+
+    throw new Error(
+      "Email provider is not configured. Set SMTP_PASS and EMAIL_FROM in production."
+    );
+  }
+
+  const nodemailer = await import("nodemailer");
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: emailFrom,
+    to: email,
+    subject: "Your ATS Scan AI OTP",
+    text: `Your ATS Scan AI verification code is ${otp}. It expires in 5 minutes.`,
+    html: buildOtpEmailHtml(otp),
+  });
+}
+
 
 function signToken(user: AuthUser) {
   const secret = requireEnv("JWT_SECRET");
@@ -727,27 +795,7 @@ async function startServer() {
 
       if (error) throw error;
 
-      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        const nodemailer = await import("nodemailer");
-
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
-        });
-
-        await transporter.sendMail({
-          from: `"ATS Scan AI" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: "Your ATS Scan AI OTP",
-          text: `Your verification code is ${otp}. It expires in 5 minutes.`,
-          html: `<div style="font-family:Arial,sans-serif;padding:20px"><h2>ATS Scan AI</h2><p>Your verification code is:</p><h1>${otp}</h1><p>This code expires in 5 minutes.</p></div>`,
-        });
-      } else if (process.env.NODE_ENV !== "production") {
-        console.log(`[DEV OTP] ${email}: ${otp}`);
-      }
+      await sendOtpEmail(email, otp);
 
       return res.json({
         status: "ok",
