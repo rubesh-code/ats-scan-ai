@@ -1,0 +1,5 @@
+{
+  "name": "ATS Scan AI",
+  "description": "Production MVP for AI-powered ATS resume analysis with credits, Razorpay payments, Supabase storage/history, and Gemini reports.",
+  "requestFramePermissions": []
+}
