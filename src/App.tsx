@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+﻿import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { load } from "@cashfreepayments/cashfree-js";
 import {
   ArrowRight,
   BarChart3,
@@ -22,12 +23,6 @@ import {
 } from "lucide-react";
 
 const TOKEN_KEY = "ats_token";
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
 
 type User = {
   id: string;
@@ -92,21 +87,6 @@ type Scan = {
 };
 
 const DEFAULT_JOB_DESCRIPTION = `We are hiring a React Developer with strong experience in React, TypeScript, REST API integration, Tailwind CSS, Git, frontend performance optimization, reusable components, and responsive UI development.`;
-
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -658,13 +638,7 @@ export default function App() {
         throw new Error("Login required.");
       }
 
-      const razorpayLoaded = await loadRazorpayScript();
-
-      if (!razorpayLoaded) {
-        throw new Error("Razorpay checkout could not be loaded.");
-      }
-
-      const orderResponse = await authFetch("/api/payment/create-order", {
+      const orderResponse = await authFetch("/api/payment/cashfree/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ package_id: selectedPackage.id }),
@@ -673,56 +647,46 @@ export default function App() {
       const orderData = await orderResponse.json();
 
       if (!orderResponse.ok) {
-        throw new Error(orderData.error || "Could not create order.");
+        throw new Error(orderData.error || "Could not create Cashfree order.");
       }
 
-      const options = {
-        key: orderData.key_id,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: "ATS Scan AI",
-        description: `${selectedPackage.name} - ${selectedPackage.credits} credits`,
-        order_id: orderData.order_id,
-        prefill: {
-          name: user.name,
-          email: user.email,
-        },
-        theme: { color: "#2563eb" },
-        handler: async function (response: any) {
-          try {
-            const verifyResponse = await authFetch("/api/payment/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
+      if (!orderData.payment_session_id || !orderData.order_id) {
+        throw new Error("Invalid Cashfree order response.");
+      }
 
-            const verifyData = await verifyResponse.json();
+      const cashfree = await load({
+        mode: (orderData.mode || "sandbox") as "sandbox" | "production",
+      });
 
-            if (!verifyResponse.ok) {
-              throw new Error(verifyData.error || verifyData.message);
-            }
+      const checkoutResult = await cashfree.checkout({
+        paymentSessionId: orderData.payment_session_id,
+        redirectTarget: "_modal",
+      });
 
-            setPaymentMessage(`Payment successful. ${verifyData.credits_added} credits added.`);
-            await refreshDashboard();
-          } catch (error) {
-            setPaymentError(error instanceof Error ? error.message : "Payment verification failed.");
-          }
-        },
-      };
+      if (checkoutResult?.error) {
+        throw new Error("Payment was cancelled or failed. Please try again.");
+      }
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      const verifyResponse = await authFetch("/api/payment/cashfree/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderData.order_id }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.error || verifyData.message || "Payment verification failed.");
+      }
+
+      setPaymentMessage(`Payment successful. ${verifyData.credits_added} credits added.`);
+      await refreshDashboard();
     } catch (error) {
       setPaymentError(error instanceof Error ? error.message : "Payment failed.");
     } finally {
       setPaymentLoading(false);
     }
   }
-
   async function handleAnalyzeResume() {
     try {
       setAnalysisLoading(true);
@@ -1025,7 +989,7 @@ export default function App() {
                 <div className="price-row">
                   <div>
                     <span>10 Credits</span>
-                    <strong>₹{starterPackage?.price_inr ?? 29}</strong>
+                    <strong>â‚¹{starterPackage?.price_inr ?? 29}</strong>
                   </div>
 
                   <ul>
@@ -1226,7 +1190,7 @@ export default function App() {
           <div className="stat-card buy-card">
             <div>
               <span>Credit Pack</span>
-              <strong>{starterPackage ? `₹${starterPackage.price_inr}` : "..."}</strong>
+              <strong>{starterPackage ? `â‚¹${starterPackage.price_inr}` : "..."}</strong>
               <small>{starterPackage ? `${starterPackage.credits} credits` : "Loading"}</small>
             </div>
 
@@ -1385,3 +1349,4 @@ export default function App() {
     </div>
   );
 }
+

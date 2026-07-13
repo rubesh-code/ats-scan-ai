@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
 import dotenv from "dotenv";
-import Razorpay from "razorpay";
 import crypto from "crypto";
 import multer from "multer";
 import mammoth from "mammoth";
@@ -229,30 +228,132 @@ function authMiddleware(
   }
 }
 
-function getRazorpay() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-
-  if (!keyId || !keySecret) return null;
-
-  return new Razorpay({
-    key_id: keyId,
-    key_secret: keySecret,
-  });
+function getCashfreeMode() {
+  return String(process.env.CASHFREE_ENV || "sandbox").toLowerCase() === "production"
+    ? "production"
+    : "sandbox";
 }
 
-function requireRazorpay(res: express.Response) {
-  const client = getRazorpay();
+function getCashfreeBaseUrl() {
+  return getCashfreeMode() === "production"
+    ? "https://api.cashfree.com/pg"
+    : "https://sandbox.cashfree.com/pg";
+}
 
-  if (!client) {
+function getAppUrl() {
+  return String(
+    process.env.APP_URL ||
+      process.env.CLIENT_ORIGIN?.split(",")[0] ||
+      `http://localhost:${process.env.PORT || 5000}`
+  ).replace(/\/$/, "");
+}
+
+function requireCashfreeConfig(res: express.Response) {
+  const appId = process.env.CASHFREE_APP_ID;
+  const secretKey = process.env.CASHFREE_SECRET_KEY;
+  const apiVersion = process.env.CASHFREE_API_VERSION || "2025-01-01";
+
+  if (!appId || !secretKey) {
     res.status(503).json({
       error:
-        "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env.",
+        "Cashfree is not configured. Set CASHFREE_APP_ID and CASHFREE_SECRET_KEY in .env.",
     });
     return null;
   }
 
-  return client;
+  return { appId, secretKey, apiVersion };
+}
+
+async function cashfreeApiRequest(params: {
+  path: string;
+  method: "GET" | "POST";
+  body?: unknown;
+  appId: string;
+  secretKey: string;
+  apiVersion: string;
+}) {
+  const response = await fetch(`${getCashfreeBaseUrl()}${params.path}`, {
+    method: params.method,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "x-client-id": params.appId,
+      "x-client-secret": params.secretKey,
+      "x-api-version": params.apiVersion,
+    },
+    body: params.body ? JSON.stringify(params.body) : undefined,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        data?.error ||
+        `Cashfree API failed with status ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+async function addCreditsForPaidPayment(params: {
+  db: any;
+  payment: any;
+  userId: string;
+}) {
+  const { db, payment, userId } = params;
+
+  const { data: existingTransaction } = await db
+    .from("credit_transactions")
+    .select("id")
+    .eq("payment_id", payment.id)
+    .eq("type", "purchase")
+    .maybeSingle();
+
+  if (existingTransaction) {
+    return {
+      alreadyAdded: true,
+      creditsAdded: 0,
+    };
+  }
+
+  const { data: user, error: userError } = await db
+    .from("users")
+    .select("credits")
+    .eq("id", userId)
+    .single();
+
+  if (userError || !user) {
+    throw new Error("User not found.");
+  }
+
+  const { error: transactionError } = await db.from("credit_transactions").insert([
+    {
+      user_id: userId,
+      payment_id: payment.id,
+      type: "purchase",
+      credits: payment.credits,
+      description: `Purchased ${payment.credits} credits via Cashfree`,
+    },
+  ]);
+
+  if (transactionError) throw transactionError;
+
+  const { error: userUpdateError } = await db
+    .from("users")
+    .update({
+      credits: Number(user.credits || 0) + Number(payment.credits || 0),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (userUpdateError) throw userUpdateError;
+
+  return {
+    alreadyAdded: false,
+    creditsAdded: Number(payment.credits || 0),
+  };
 }
 
 function requireGemini(res: express.Response) {
@@ -1006,11 +1107,11 @@ async function startServer() {
     }
   });
 
-  app.post("/api/payment/create-order", authMiddleware, async (req, res) => {
+  app.post("/api/payment/cashfree/create-order", authMiddleware, async (req, res) => {
     if (!requireSupabase(res)) return;
 
-    const razorpay = requireRazorpay(res);
-    if (!razorpay) return;
+    const config = requireCashfreeConfig(res);
+    if (!config) return;
 
     const db = supabase! as any;
     const { package_id } = req.body;
@@ -1035,16 +1136,47 @@ async function startServer() {
         });
       }
 
-      const order = await razorpay.orders.create({
-        amount: creditPackage.price_inr * 100,
-        currency: "INR",
-        receipt: `credits_${Date.now()}`,
-        notes: {
-          user_id: req.user!.id,
-          package_id,
-          email: req.user!.email,
+      const orderId = `ats_${Date.now()}_${crypto
+        .randomUUID()
+        .replace(/-/g, "")
+        .slice(0, 12)}`;
+
+      const amount = Number(Number(creditPackage.price_inr).toFixed(2));
+      const appUrl = getAppUrl();
+
+      const cashfreeOrder = await cashfreeApiRequest({
+        path: "/orders",
+        method: "POST",
+        appId: config.appId,
+        secretKey: config.secretKey,
+        apiVersion: config.apiVersion,
+        body: {
+          order_id: orderId,
+          order_amount: amount,
+          order_currency: "INR",
+          customer_details: {
+            customer_id: req.user!.id,
+            customer_email: req.user!.email,
+            customer_phone: process.env.CASHFREE_CUSTOMER_PHONE || "9999999999",
+          },
+          order_meta: {
+            return_url: `${appUrl}/payment-status?order_id=${orderId}`,
+            notify_url: `${appUrl}/api/payment/cashfree/webhook`,
+          },
+          order_note: `Purchased ${creditPackage.credits} credits`,
+          order_tags: {
+            package_id: String(package_id),
+            user_id: req.user!.id,
+          },
         },
       });
+
+      if (!cashfreeOrder.payment_session_id) {
+        return res.status(502).json({
+          error: "Cashfree did not return payment_session_id.",
+          detail: cashfreeOrder,
+        });
+      }
 
       const { data: payment, error: paymentError } = await db
         .from("payments")
@@ -1052,8 +1184,15 @@ async function startServer() {
           {
             user_id: req.user!.id,
             package_id,
-            razorpay_order_id: order.id,
-            amount_inr: creditPackage.price_inr,
+            payment_gateway: "cashfree",
+            cashfree_order_id: cashfreeOrder.order_id || orderId,
+            cashfree_cf_order_id: cashfreeOrder.cf_order_id
+              ? String(cashfreeOrder.cf_order_id)
+              : null,
+            cashfree_order_status: cashfreeOrder.order_status || "ACTIVE",
+            cashfree_payment_session_id: cashfreeOrder.payment_session_id,
+            cashfree_response: cashfreeOrder,
+            amount_inr: amount,
             credits: creditPackage.credits,
             status: "created",
           },
@@ -1065,33 +1204,34 @@ async function startServer() {
 
       return res.json({
         status: "ok",
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        key_id: process.env.RAZORPAY_KEY_ID,
+        mode: getCashfreeMode(),
+        order_id: cashfreeOrder.order_id || orderId,
+        payment_session_id: cashfreeOrder.payment_session_id,
+        amount: cashfreeOrder.order_amount || amount,
+        currency: cashfreeOrder.order_currency || "INR",
         package: creditPackage,
         payment,
       });
     } catch (error: unknown) {
-      console.error(error);
+      console.error("[Cashfree create-order]", error);
       return res.status(500).json({
         error: getErrorMessage(error),
       });
     }
   });
 
-  app.post("/api/payment/verify", authMiddleware, async (req, res) => {
+  app.post("/api/payment/cashfree/verify", authMiddleware, async (req, res) => {
     if (!requireSupabase(res)) return;
 
+    const config = requireCashfreeConfig(res);
+    if (!config) return;
+
     const db = supabase! as any;
+    const orderId = String(req.body.order_id || "").trim();
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
-
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (!orderId) {
       return res.status(400).json({
-        error:
-          "razorpay_order_id, razorpay_payment_id, and razorpay_signature are required.",
+        error: "order_id is required.",
       });
     }
 
@@ -1099,7 +1239,8 @@ async function startServer() {
       const { data: payment, error: paymentFetchError } = await db
         .from("payments")
         .select("*")
-        .eq("razorpay_order_id", razorpay_order_id)
+        .eq("payment_gateway", "cashfree")
+        .eq("cashfree_order_id", orderId)
         .eq("user_id", req.user!.id)
         .single();
 
@@ -1117,87 +1258,48 @@ async function startServer() {
         });
       }
 
-      const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+      const cashfreeOrder = await cashfreeApiRequest({
+        path: `/orders/${encodeURIComponent(orderId)}`,
+        method: "GET",
+        appId: config.appId,
+        secretKey: config.secretKey,
+        apiVersion: config.apiVersion,
+      });
 
-      const expectedSignature = crypto
-        .createHmac("sha256", requireEnv("RAZORPAY_KEY_SECRET"))
-        .update(body)
-        .digest("hex");
+      const orderStatus = String(cashfreeOrder.order_status || "").toUpperCase();
 
-      if (expectedSignature !== razorpay_signature) {
-        await db
-          .from("payments")
-          .update({
-            status: "failed",
-            razorpay_payment_id,
-            razorpay_signature,
-          })
-          .eq("id", payment.id);
-
-        return res.status(400).json({
-          status: "error",
-          message: "Invalid payment signature.",
-        });
-      }
-
-      const { data: existingTransaction } = await db
-        .from("credit_transactions")
-        .select("id")
-        .eq("payment_id", payment.id)
-        .eq("type", "purchase")
-        .maybeSingle();
-
-      if (existingTransaction) {
-        return res.json({
-          status: "ok",
-          message: "Credits already added.",
-          credits_added: 0,
-        });
-      }
-
-      const { data: user, error: userError } = await db
-        .from("users")
-        .select("credits")
-        .eq("id", req.user!.id)
-        .single();
-
-      if (userError || !user) {
-        return res.status(404).json({
-          error: "User not found.",
-        });
-      }
-
-      const { error: transactionError } = await db
-        .from("credit_transactions")
-        .insert([
-          {
-            user_id: req.user!.id,
-            payment_id: payment.id,
-            type: "purchase",
-            credits: payment.credits,
-            description: `Purchased ${payment.credits} credits`,
-          },
-        ]);
-
-      if (transactionError) throw transactionError;
-
-      const { error: userUpdateError } = await db
-        .from("users")
+      await db
+        .from("payments")
         .update({
-          credits: Number(user.credits || 0) + payment.credits,
+          cashfree_order_status: orderStatus,
+          cashfree_response: cashfreeOrder,
+          status: orderStatus === "PAID" ? "verifying" : "created",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", req.user!.id);
+        .eq("id", payment.id);
 
-      if (userUpdateError) throw userUpdateError;
+      if (orderStatus !== "PAID") {
+        return res.status(400).json({
+          status: "pending",
+          message: `Payment is not paid yet. Current Cashfree status: ${orderStatus || "UNKNOWN"}`,
+          cashfree_status: orderStatus,
+        });
+      }
+
+      const creditResult = await addCreditsForPaidPayment({
+        db,
+        payment,
+        userId: req.user!.id,
+      });
 
       const { error: paymentUpdateError } = await db
         .from("payments")
         .update({
           status: "paid",
-          razorpay_payment_id,
-          razorpay_signature,
+          cashfree_order_status: "PAID",
+          cashfree_response: cashfreeOrder,
           verified_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", payment.id);
 
@@ -1205,15 +1307,26 @@ async function startServer() {
 
       return res.json({
         status: "ok",
-        message: "Payment verified and credits added.",
-        credits_added: payment.credits,
+        message: creditResult.alreadyAdded
+          ? "Payment already verified and credits already added."
+          : "Payment verified and credits added.",
+        credits_added: creditResult.creditsAdded,
       });
     } catch (error: unknown) {
-      console.error(error);
+      console.error("[Cashfree verify]", error);
       return res.status(500).json({
         error: getErrorMessage(error),
       });
     }
+  });
+
+  app.post("/api/payment/cashfree/webhook", async (req, res) => {
+    console.log("[Cashfree webhook received]", JSON.stringify(req.body || {}));
+
+    return res.json({
+      status: "ok",
+      message: "Webhook received. Credits are added only after server-side verify.",
+    });
   });
 
   app.post(
@@ -1495,3 +1608,4 @@ startServer().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
