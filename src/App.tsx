@@ -455,6 +455,10 @@ export default function App() {
   const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AtsAnalysis | null>(null);
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
   function authHeaders() {
     return {
       Authorization: `Bearer ${token}`,
@@ -1175,7 +1179,16 @@ export default function App() {
 
   return (
     <div className="dashboard-layout modern-dashboard-layout">
-      <aside className="sidebar modern-sidebar">
+      <aside className={`sidebar modern-sidebar ${mobileSidebarOpen ? "is-open" : ""}`}>
+        <button
+          type="button"
+          className="modern-sidebar-close"
+          aria-label="Close navigation"
+          onClick={() => setMobileSidebarOpen(false)}
+        >
+          <X size={22} />
+        </button>
+
         <div className="modern-sidebar-brand">
           <div className="modern-brand-icon">
             <FileSearch size={27} />
@@ -1187,11 +1200,11 @@ export default function App() {
         </div>
 
         <nav className="sidebar-nav modern-sidebar-nav">
-          <a href="#dashboard" className="active"><LayoutDashboard size={19} />Dashboard</a>
-          <a href="#analyze"><FileSearch size={19} />Analyze</a>
-          <a href="#reports"><BarChart3 size={19} />Reports</a>
-          <a href="#history"><History size={19} />History</a>
-          <a href="#credits"><Crown size={19} />Pricing</a>
+          <a href="#dashboard" className="active" onClick={() => setMobileSidebarOpen(false)}><LayoutDashboard size={19} />Dashboard</a>
+          <a href="#analyze" onClick={() => setMobileSidebarOpen(false)}><FileSearch size={19} />Analyze</a>
+          <a href="#reports" onClick={() => setMobileSidebarOpen(false)}><BarChart3 size={19} />Reports</a>
+          <a href="#history" onClick={() => setMobileSidebarOpen(false)}><History size={19} />History</a>
+          <a href="#credits" onClick={() => setMobileSidebarOpen(false)}><Crown size={19} />Pricing</a>
         </nav>
 
         <div className="modern-sidebar-section-label">Account</div>
@@ -1235,10 +1248,29 @@ export default function App() {
         </button>
       </aside>
 
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          className="modern-sidebar-overlay"
+          aria-label="Close navigation"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       <main className="dashboard-main modern-dashboard-main" id="dashboard">
         <header className="modern-topbar">
           <div className="modern-topbar-left">
-            <button type="button" className="modern-menu-button" aria-label="Open navigation">
+            <button
+              type="button"
+              className="modern-menu-button"
+              aria-label="Open navigation"
+              aria-expanded={mobileSidebarOpen}
+              onClick={() => {
+                setMobileSidebarOpen(true);
+                setNotificationsOpen(false);
+                setProfileMenuOpen(false);
+              }}
+            >
               <Menu size={24} />
             </button>
             <div>
@@ -1248,13 +1280,55 @@ export default function App() {
           </div>
 
           <div className="modern-topbar-actions">
-            <button type="button" className="modern-icon-button" aria-label="Notifications">
-              <Bell size={21} />
-              <span className="modern-notification-dot" aria-hidden="true" />
-            </button>
-            <div className="modern-top-avatar">
-              {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
-              <span aria-hidden="true" />
+            <div className="modern-action-menu">
+              <button
+                type="button"
+                className="modern-icon-button"
+                aria-label="Notifications"
+                aria-expanded={notificationsOpen}
+                onClick={() => {
+                  setNotificationsOpen((open) => !open);
+                  setProfileMenuOpen(false);
+                }}
+              >
+                <Bell size={21} />
+                <span className="modern-notification-dot" aria-hidden="true" />
+              </button>
+
+              {notificationsOpen && (
+                <div className="modern-dropdown modern-notification-menu">
+                  <strong>Notifications</strong>
+                  <p>No new notifications.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="modern-action-menu">
+              <button
+                type="button"
+                className="modern-top-avatar"
+                aria-label="Open profile menu"
+                aria-expanded={profileMenuOpen}
+                onClick={() => {
+                  setProfileMenuOpen((open) => !open);
+                  setNotificationsOpen(false);
+                }}
+              >
+                {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                <span aria-hidden="true" />
+              </button>
+
+              {profileMenuOpen && (
+                <div className="modern-dropdown modern-profile-menu">
+                  <div>
+                    <strong>{user?.name || "ATS User"}</strong>
+                    <span>{user?.email}</span>
+                  </div>
+                  <button type="button" onClick={handleLogout}>
+                    <LogOut size={16} /> Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
