@@ -14,6 +14,11 @@ import {
   LayoutDashboard,
   LockKeyhole,
   LogOut,
+  Menu,
+  Bell,
+  Crown,
+  FileText,
+  X,
   Mail,
   Send,
   ShieldCheck,
@@ -1169,91 +1174,137 @@ export default function App() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="brand-mark sidebar-brand">
-          <Sparkles size={20} />
-          <span>ATS Scan AI</span>
+    <div className="dashboard-layout modern-dashboard-layout">
+      <aside className="sidebar modern-sidebar">
+        <div className="modern-sidebar-brand">
+          <div className="modern-brand-icon">
+            <FileSearch size={27} />
+          </div>
+          <div>
+            <strong>ATS Scan AI</strong>
+            <span>Resume Analyzer</span>
+          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <a href="#dashboard" className="active">
-            <LayoutDashboard size={18} />
-            Dashboard
-          </a>
-          <a href="#analyze">
-            <FileSearch size={18} />
-            Analyze
-          </a>
-          <a href="#reports">
-            <BarChart3 size={18} />
-            Report
-          </a>
-          <a href="#history">
-            <History size={18} />
-            History
-          </a>
+        <nav className="sidebar-nav modern-sidebar-nav">
+          <a href="#dashboard" className="active"><LayoutDashboard size={19} />Dashboard</a>
+          <a href="#analyze"><FileSearch size={19} />Analyze</a>
+          <a href="#reports"><BarChart3 size={19} />Reports</a>
+          <a href="#history"><History size={19} />History</a>
+          <a href="#credits"><Crown size={19} />Pricing</a>
         </nav>
 
-        <div className="sidebar-user">
-          <span>Signed in as</span>
-          <strong>{user?.email}</strong>
-          <button type="button" className="ghost-button dark" onClick={handleLogout}>
-            <LogOut size={16} /> Logout
+        <div className="modern-sidebar-section-label">Account</div>
+
+        <nav className="sidebar-nav modern-sidebar-nav modern-account-nav">
+          <a href="#dashboard"><Users size={19} />Profile</a>
+          <a href="#dashboard"><Target size={19} />Settings</a>
+        </nav>
+
+        <div className="modern-credit-card" id="credits">
+          <div className="modern-credit-card-top">
+            <div>
+              <span>Credits</span>
+              <strong>{user?.credits ?? 0}</strong>
+              <small>available</small>
+            </div>
+            <div className="modern-credit-icon"><Wallet size={22} /></div>
+          </div>
+          <button
+            type="button"
+            onClick={() => starterPackage && handleBuyCredits(starterPackage)}
+            disabled={!starterPackage || paymentLoading}
+          >
+            <CreditCard size={18} />
+            {paymentLoading ? "Opening..." : "Buy Credits"}
           </button>
         </div>
+
+        <div className="modern-sidebar-user">
+          <div className="modern-user-avatar">
+            {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+          </div>
+          <div className="modern-user-copy">
+            <strong>{user?.name || "ATS User"}</strong>
+            <span>{user?.email}</span>
+          </div>
+        </div>
+
+        <button type="button" className="modern-logout-button" onClick={handleLogout}>
+          <LogOut size={18} />Logout
+        </button>
       </aside>
 
-      <main className="dashboard-main" id="dashboard">
-        <header className="dashboard-header">
-          <div>
-            <p className="eyebrow">Production dashboard</p>
-            <h1>Resume Analyzer</h1>
-            <p>Upload resumes, check ATS fit, compare scan history, and download reports.</p>
+      <main className="dashboard-main modern-dashboard-main" id="dashboard">
+        <header className="modern-topbar">
+          <div className="modern-topbar-left">
+            <button type="button" className="modern-menu-button" aria-label="Open navigation">
+              <Menu size={24} />
+            </button>
+            <div>
+              <h1>Hello, {user?.name?.split(" ")[0] || "there"} <span aria-hidden="true">👋</span></h1>
+              <p>Welcome back! Analyze your resumes and boost your job chances.</p>
+            </div>
+          </div>
+
+          <div className="modern-topbar-actions">
+            <button type="button" className="modern-icon-button" aria-label="Notifications">
+              <Bell size={21} />
+              <span className="modern-notification-dot" aria-hidden="true" />
+            </button>
+            <div className="modern-top-avatar">
+              {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+              <span aria-hidden="true" />
+            </div>
           </div>
         </header>
 
-        <section className="stat-grid">
-          <div className="stat-card primary">
-            <div>
-              <span>Available Credits</span>
-              <strong>{user?.credits ?? "..."}</strong>
-            </div>
-            <Wallet size={28} />
-          </div>
-
-          <div className="stat-card">
-            <div>
+        <section className="stat-grid modern-stat-grid">
+          <article className="stat-card modern-stat-card stat-blue">
+            <div className="modern-stat-icon"><FileSearch size={25} /></div>
+            <div className="modern-stat-copy">
               <span>Total Scans</span>
-              <strong>{user?.total_scans ?? "..."}</strong>
+              <strong>{user?.total_scans ?? 0}</strong>
+              <small>All time scans</small>
             </div>
-            <FileSearch size={26} />
-          </div>
+            <TrendingUp className="modern-stat-trend" size={28} />
+          </article>
 
-          <div className="stat-card">
-            <div>
+          <article className="stat-card modern-stat-card stat-green">
+            <div className="modern-stat-icon"><TrendingUp size={25} /></div>
+            <div className="modern-stat-copy">
               <span>Average Score</span>
-              <strong>{user?.avg_score ?? "..."}</strong>
+              <strong>{user?.avg_score ?? 0}%</strong>
+              <small>Across all scans</small>
             </div>
-            <TrendingUp size={26} />
-          </div>
+            <TrendingUp className="modern-stat-trend" size={28} />
+          </article>
 
-          <div className="stat-card buy-card">
-            <div>
+          <article className="stat-card modern-stat-card stat-purple">
+            <div className="modern-stat-icon"><FileText size={25} /></div>
+            <div className="modern-stat-copy">
+              <span>Available Credits</span>
+              <strong>{user?.credits ?? 0}</strong>
+              <small>Remaining credits</small>
+            </div>
+            <TrendingUp className="modern-stat-trend" size={28} />
+          </article>
+
+          <article className="stat-card modern-stat-card stat-gold modern-credit-pack-card">
+            <div className="modern-stat-icon"><Crown size={25} /></div>
+            <div className="modern-stat-copy">
               <span>Credit Pack</span>
               <strong>{starterPackage ? `₹${starterPackage.price_inr}` : "..."}</strong>
               <small>{starterPackage ? `${starterPackage.credits} credits` : "Loading"}</small>
             </div>
-
             <button
               type="button"
               onClick={() => starterPackage && handleBuyCredits(starterPackage)}
               disabled={!starterPackage || paymentLoading}
             >
-              <CreditCard size={18} />
-              {paymentLoading ? "Creating..." : "Buy"}
+              {paymentLoading ? "Opening..." : "Buy Now"}
             </button>
-          </div>
+          </article>
         </section>
 
         {(paymentMessage || paymentError) && (
@@ -1263,17 +1314,19 @@ export default function App() {
           </div>
         )}
 
-        <section className="workspace-grid">
-          <div className="analyze-panel" id="analyze">
-            <div className="section-title-row">
-              <div>
-                <p className="eyebrow">New scan</p>
-                <h2>Analyze Resume</h2>
+        <section className="workspace-grid modern-workspace-grid">
+          <div className="analyze-panel modern-analyze-panel" id="analyze">
+            <div className="modern-panel-heading">
+              <div className="modern-panel-title">
+                <div className="modern-panel-icon"><FileSearch size={23} /></div>
+                <div>
+                  <h2>Analyze Resume</h2>
+                  <p>Upload your resume and get an ATS score in seconds.</p>
+                </div>
               </div>
-              <Target size={26} />
             </div>
 
-            <div className="upload-dropzone">
+            <div className="upload-dropzone modern-upload-dropzone">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1285,31 +1338,43 @@ export default function App() {
                   setAnalysisMessage(null);
                 }}
               />
-
-              <div className="upload-icon">
-                <Upload size={28} />
-              </div>
-
-              <h3>Upload your resume</h3>
+              <div className="modern-upload-icon"><CloudUpload size={52} /></div>
+              <h3>Drag &amp; drop your resume here</h3>
+              <div className="modern-upload-divider"><span /><small>or</small><span /></div>
+              <button
+                type="button"
+                className="modern-choose-file-button"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload size={19} />Choose File
+              </button>
               <p>PDF, DOCX, or TXT. Maximum file size 5 MB.</p>
-
-              <div className="button-row center">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={18} /> Upload Resume
-                </button>
-              </div>
-
-              <strong className="selected-file">
-                {selectedResumeFile ? selectedResumeFile.name : "No file selected yet"}
-              </strong>
             </div>
 
-            <label>Job type</label>
-            <div className="two-column-form">
+            {selectedResumeFile && (
+              <div className="modern-selected-file">
+                <div className="modern-file-type-icon"><FileText size={23} /></div>
+                <div className="modern-selected-file-copy">
+                  <strong>{selectedResumeFile.name}</strong>
+                  <span>{(selectedResumeFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                </div>
+                <CheckCircle2 className="modern-file-success" size={23} />
+                <button
+                  type="button"
+                  className="modern-remove-file"
+                  aria-label="Remove selected file"
+                  onClick={() => {
+                    setSelectedResumeFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
+
+            <label className="modern-field-label">Job Type <span>(Optional)</span></label>
+            <div className="two-column-form modern-two-column-form">
               <select
                 value={jobTypeId}
                 onKeyDown={handleAnalyzeEnterKey}
@@ -1320,9 +1385,7 @@ export default function App() {
               >
                 <option value="">Select job type</option>
                 {jobRoles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.role_name}
-                  </option>
+                  <option key={role.id} value={role.id}>{role.role_name}</option>
                 ))}
               </select>
 
@@ -1337,41 +1400,57 @@ export default function App() {
               />
             </div>
 
-            <label>Job description</label>
+            <label className="modern-field-label">Job Description</label>
             <textarea
+              className="modern-job-description"
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
-              rows={7}
-              placeholder={DEFAULT_JOB_DESCRIPTION}
+              rows={5}
+              placeholder="Paste the full job description here to get a more accurate ATS score and feedback..."
             />
 
-            <button
-              type="button"
-              className="analyze-button"
-              onClick={handleAnalyzeResume}
-              disabled={analysisLoading}
-            >
-              <FileSearch size={18} />
-              {analysisLoading ? "Analyzing Resume..." : "Analyze Resume"}
-            </button>
+            <div className="modern-analyze-footer">
+              <button
+                type="button"
+                className="analyze-button modern-analyze-button"
+                onClick={handleAnalyzeResume}
+                disabled={analysisLoading}
+              >
+                <Sparkles size={19} />
+                {analysisLoading ? "Analyzing Resume..." : "Analyze Resume"}
+              </button>
+
+              <div className="modern-security-note">
+                <ShieldCheck size={17} />
+                <span>We never store your resume. Your data is 100% secure.</span>
+              </div>
+            </div>
 
             {analysisMessage && <p className="success-text">{analysisMessage}</p>}
             {analysisError && <p className="error-text">{analysisError}</p>}
           </div>
 
-          <aside className="history-panel" id="history">
-            <div className="section-title-row">
-              <div>
-                <p className="eyebrow">Latest 10</p>
-                <h2>Scan History</h2>
+          <aside className="history-panel modern-history-panel" id="history">
+            <div className="modern-panel-heading">
+              <div className="modern-panel-title">
+                <div className="modern-panel-icon"><History size={23} /></div>
+                <div><h2>Scan History</h2></div>
               </div>
-              <History size={24} />
+              <a href="#history" className="modern-view-all">View All</a>
             </div>
 
             {scans.length === 0 ? (
-              <div className="empty-state">
-                <FileSearch size={28} />
-                <p>No scans yet. Analyze your first resume to start tracking progress.</p>
+              <div className="empty-state modern-history-empty">
+                <div className="modern-empty-illustration"><FileSearch size={66} /></div>
+                <h3>No scans yet</h3>
+                <p>Analyze your first resume to start tracking your progress.</p>
+                <button
+                  type="button"
+                  className="secondary-button modern-empty-button"
+                  onClick={() => scrollToSection("analyze")}
+                >
+                  Analyze Now <ArrowRight size={18} />
+                </button>
               </div>
             ) : (
               <div className="scan-list">
@@ -1386,7 +1465,6 @@ export default function App() {
                       <span>{scan.filename}</span>
                       <small>{new Date(scan.date).toLocaleString()}</small>
                     </div>
-
                     <strong className="scan-score">{scan.score}/100</strong>
                   </button>
                 ))}
@@ -1396,6 +1474,10 @@ export default function App() {
         </section>
 
         {analysis && <Report analysis={analysis} />}
+
+        <footer className="modern-dashboard-footer">
+          © {new Date().getFullYear()} ATS Scan AI. All rights reserved.
+        </footer>
       </main>
     </div>
   );
