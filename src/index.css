@@ -1113,39 +1113,423 @@ code {
   letter-spacing: -0.04em;
 }
 
-.step-flow {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
-}
+/* =========================================================
+   Animated 3-step ATS process
+   ========================================================= */
 
-.step-flow div {
+.animated-steps-card {
   position: relative;
-  padding-top: 8px;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 520px;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.1), transparent 26%),
+    radial-gradient(circle at 12% 92%, rgba(14, 165, 233, 0.09), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #f8fbff 56%, #f3f8ff 100%);
+  border-color: #d8e6fa;
 }
 
-.step-flow span {
-  width: 52px;
-  height: 52px;
+.animated-steps-card::before {
+  position: absolute;
+  z-index: -1;
+  right: -90px;
+  bottom: -120px;
+  width: 360px;
+  height: 230px;
+  content: "";
+  opacity: 0.65;
+  background-image:
+    radial-gradient(circle at center, rgba(37, 99, 235, 0.2) 1.2px, transparent 1.2px);
+  background-size: 13px 13px;
+  transform: rotate(-7deg);
+  mask-image: linear-gradient(to top, #000, transparent);
+}
+
+.animated-steps-card::after {
+  position: absolute;
+  z-index: -1;
+  left: 46%;
+  bottom: -120px;
+  width: 380px;
+  height: 210px;
+  content: "";
+  opacity: 0.34;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(59, 130, 246, 0.2) 0 2px,
+      transparent 3px 14px
+    );
+  transform: translateX(-50%) scaleX(1.8);
+}
+
+.steps-heading {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.steps-heading h2 {
+  margin-bottom: 10px;
+}
+
+.steps-intro {
+  max-width: 560px;
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.steps-value-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  color: #1d4ed8;
+  background: rgba(219, 234, 254, 0.8);
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+}
+
+.step-progress-line {
+  position: relative;
+  width: calc(100% - 130px);
+  height: 4px;
+  margin: 58px auto -54px;
+  overflow: hidden;
+  background: #dbeafe;
+  border-radius: 999px;
+}
+
+.step-progress-line::before,
+.step-progress-line::after {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  content: "";
+  background: #ffffff;
+  border: 3px solid #60a5fa;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 5px rgba(96, 165, 250, 0.12);
+}
+
+.step-progress-line::before {
+  left: 0;
+}
+
+.step-progress-line::after {
+  right: 0;
+}
+
+.step-progress-line > span {
+  display: block;
+  width: 34%;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #60a5fa, #22d3ee);
+  border-radius: inherit;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.45);
+  animation: stepLineTravel 6s ease-in-out infinite;
+}
+
+.animated-step-flow {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.process-step {
+  position: relative;
+  min-width: 0;
+  min-height: 300px;
+  padding: 54px 18px 20px;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.94));
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  box-shadow:
+    0 14px 34px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+  animation: processCardGlow 6s ease-in-out infinite;
+}
+
+.process-step:nth-child(2) {
+  animation-delay: 2s;
+}
+
+.process-step:nth-child(3) {
+  animation-delay: 4s;
+}
+
+.process-step:hover {
+  transform: translateY(-6px);
+  border-color: #93c5fd;
+  box-shadow:
+    0 22px 46px rgba(37, 99, 235, 0.14),
+    0 0 0 5px rgba(59, 130, 246, 0.05);
+}
+
+.step-number {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  z-index: 4;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
+  color: #ffffff;
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+  border: 4px solid #ffffff;
   border-radius: 50%;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  font-size: 17px;
   font-weight: 950;
-  font-size: 22px;
-  margin-bottom: 22px;
+  transform: translateX(-50%);
+  box-shadow:
+    0 10px 20px rgba(37, 99, 235, 0.28),
+    0 0 0 1px #bfdbfe;
 }
 
-.step-flow h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
+.step-icon-wrap {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  color: #2563eb;
+  background:
+    radial-gradient(circle at 40% 35%, #ffffff, #eaf3ff 68%, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: 50%;
+  box-shadow:
+    0 14px 34px rgba(37, 99, 235, 0.16),
+    inset 0 0 0 10px rgba(255, 255, 255, 0.55);
 }
 
-.step-flow p {
-  color: #475569;
-  line-height: 1.55;
+.step-icon-wrap svg {
+  position: relative;
+  z-index: 3;
+  filter: drop-shadow(0 7px 12px rgba(37, 99, 235, 0.18));
+}
+
+.step-pulse-ring,
+.step-scan-frame,
+.step-success-ring {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+}
+
+.step-pulse-ring {
+  border: 2px solid rgba(59, 130, 246, 0.45);
+  animation: uploadStepPulse 2s ease-out infinite;
+}
+
+.step-scan-frame {
+  inset: 18px;
+  border: 2px dashed rgba(124, 58, 237, 0.56);
+  border-radius: 18px;
+  animation: scanStepRotate 5s linear infinite;
+}
+
+.process-step-analysis .step-icon-wrap {
+  color: #7c3aed;
+  background:
+    radial-gradient(circle at 40% 35%, #ffffff, #f3e8ff 68%, #e9d5ff);
+  border-color: #ddd6fe;
+  box-shadow:
+    0 14px 34px rgba(124, 58, 237, 0.16),
+    inset 0 0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.process-step-improve .step-icon-wrap {
+  color: #059669;
+  background:
+    radial-gradient(circle at 40% 35%, #ffffff, #e9fff7 68%, #d1fae5);
+  border-color: #a7f3d0;
+  box-shadow:
+    0 14px 34px rgba(5, 150, 105, 0.15),
+    inset 0 0 0 10px rgba(255, 255, 255, 0.55);
+}
+
+.step-success-ring {
+  border: 2px solid rgba(16, 185, 129, 0.42);
+  animation: successStepPulse 2.2s ease-in-out infinite;
+}
+
+.process-step h3 {
+  margin: 0 0 9px;
+  color: #0f172a;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.process-step > p {
+  min-height: 66px;
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.step-benefit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.process-step-analysis .step-benefit {
+  color: #6d28d9;
+}
+
+.process-step-improve .step-benefit {
+  color: #047857;
+}
+
+@keyframes stepLineTravel {
+  0% {
+    width: 12%;
+    transform: translateX(-12%);
+  }
+
+  33% {
+    width: 38%;
+    transform: translateX(0);
+  }
+
+  66% {
+    width: 38%;
+    transform: translateX(82%);
+  }
+
+  100% {
+    width: 18%;
+    transform: translateX(455%);
+  }
+}
+
+@keyframes processCardGlow {
+  0%,
+  22%,
+  100% {
+    border-color: #dbeafe;
+    transform: translateY(0);
+    box-shadow:
+      0 14px 34px rgba(15, 23, 42, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  10% {
+    border-color: #60a5fa;
+    transform: translateY(-5px);
+    box-shadow:
+      0 22px 46px rgba(37, 99, 235, 0.16),
+      0 0 0 5px rgba(59, 130, 246, 0.05);
+  }
+}
+
+@keyframes uploadStepPulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.88);
+  }
+
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+@keyframes scanStepRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes successStepPulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.28);
+  }
+}
+
+@media (max-width: 1180px) {
+  .steps-heading {
+    display: grid;
+  }
+
+  .steps-value-badge {
+    width: fit-content;
+  }
+
+  .animated-step-flow {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .step-progress-line {
+    display: none;
+  }
+
+  .process-step {
+    min-height: auto;
+  }
+
+  .process-step > p {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .animated-steps-card {
+    min-height: auto;
+    padding: 22px;
+  }
+
+  .steps-heading h2 {
+    font-size: 26px;
+  }
+
+  .steps-value-badge {
+    white-space: normal;
+  }
+
+  .process-step {
+    padding: 52px 16px 20px;
+  }
 }
 
 .pricing-login-card {
@@ -2234,3 +2618,2683 @@ button:focus-visible {
     white-space: normal;
   }
 }
+
+/* =========================================================
+   LANDING SCANNER — CONTINUOUS DEMO ONLY
+
+   This landing-page scanner is visual-only:
+   Uploading → Scanning → Results → Repeat
+
+   It must never open the user's local file picker.
+   Clicking the card is handled by LandingScanAnimation.tsx
+   and scrolls to the Email OTP Login section.
+   ========================================================= */
+
+.hero-animation-wrap {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* Main continuous-animation card */
+.resume-animation {
+  width: 100%;
+  max-width: 700px;
+  min-height: 500px;
+  padding: 26px;
+  overflow: hidden;
+  color: #ffffff;
+  cursor: pointer;
+  user-select: none;
+
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(37, 99, 235, 0.32),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 10% 85%,
+      rgba(14, 165, 233, 0.12),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(5, 15, 36, 0.98),
+      rgba(7, 22, 49, 0.98)
+    );
+
+  border: 1px solid rgba(96, 165, 250, 0.48);
+  border-radius: 24px;
+
+  box-shadow:
+    0 30px 90px rgba(37, 99, 235, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.resume-animation:hover {
+  transform: translateY(-3px);
+  border-color: rgba(96, 165, 250, 0.82);
+
+  box-shadow:
+    0 36px 100px rgba(37, 99, 235, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.resume-animation:focus-visible {
+  outline: 4px solid rgba(56, 189, 248, 0.42);
+  outline-offset: 5px;
+}
+
+/* Upload / Scan / Results heading */
+.resume-animation .scan-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+.resume-animation .scan-step-header span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+.resume-animation .scan-step-header span.active {
+  color: #38bdf8;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.75);
+}
+
+.resume-animation .scan-step-header i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  background: #334155;
+  border-radius: 50%;
+}
+
+/* Main animation content */
+.resume-animation .scan-animation-content {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  animation: atsScanContentEnter 0.45s ease both;
+}
+
+/* Animated document area */
+.resume-animation .document-animation {
+  position: relative;
+  min-height: 208px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+
+.resume-animation .document-sheet {
+  position: relative;
+  z-index: 2;
+  width: 132px;
+  height: 174px;
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(30, 64, 110, 0.9),
+      rgba(17, 40, 76, 0.98)
+    );
+
+  border: 1px solid rgba(96, 165, 250, 0.52);
+  border-radius: 12px 25px 12px 12px;
+
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.34),
+    0 0 45px rgba(37, 99, 235, 0.2);
+
+  animation: atsDocumentFloat 2.4s ease-in-out infinite;
+}
+
+.resume-animation .document-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  background: rgba(96, 165, 250, 0.24);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.resume-animation .document-lines {
+  display: grid;
+  gap: 14px;
+  padding: 50px 22px;
+}
+
+.resume-animation .document-lines span {
+  height: 7px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #60a5fa,
+      rgba(96, 165, 250, 0.13)
+    );
+
+  border-radius: 10px;
+}
+
+.resume-animation .document-lines span:nth-child(2) {
+  width: 70%;
+}
+
+.resume-animation .document-lines span:nth-child(3) {
+  width: 90%;
+}
+
+.resume-animation .document-lines span:nth-child(4) {
+  width: 58%;
+}
+
+.resume-animation .document-lines span:nth-child(5) {
+  width: 80%;
+}
+
+/* Small upload symbol shown during fake upload */
+.resume-animation .demo-upload-symbol {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+
+  width: 43px;
+  height: 43px;
+
+  display: grid;
+  place-items: center;
+
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.2);
+
+  border: 1px solid rgba(96, 165, 250, 0.36);
+  border-radius: 12px;
+
+  box-shadow:
+    0 10px 24px rgba(37, 99, 235, 0.25);
+
+  animation:
+    atsUploadPulse 1.15s ease-in-out infinite;
+}
+
+/* Moving scanner line */
+.resume-animation .scanner-line {
+  position: absolute;
+  top: 0;
+  right: -20px;
+  left: -20px;
+
+  height: 3px;
+
+  background: #34d399;
+  border-radius: 10px;
+
+  box-shadow:
+    0 0 8px #34d399,
+    0 0 22px #34d399,
+    0 0 46px rgba(52, 211, 153, 0.95);
+
+  animation:
+    atsScanDocument 1.45s ease-in-out infinite;
+}
+
+/* Animated data dots around document while scanning */
+.resume-animation .document-animation.is-scanning::before,
+.resume-animation .document-animation.is-scanning::after {
+  position: absolute;
+  z-index: 1;
+
+  width: 175px;
+  height: 78px;
+
+  content: "";
+  opacity: 0.72;
+
+  background:
+    radial-gradient(
+      circle,
+      #38bdf8 1px,
+      transparent 2px
+    )
+    0 0 / 13px 13px;
+
+  filter:
+    drop-shadow(
+      0 0 7px rgba(56, 189, 248, 0.72)
+    );
+
+  animation:
+    atsDataFlow 1.8s linear infinite;
+}
+
+.resume-animation .document-animation.is-scanning::before {
+  left: 10px;
+}
+
+.resume-animation .document-animation.is-scanning::after {
+  right: 10px;
+  animation-direction: reverse;
+}
+
+/* Demo file row */
+.resume-animation .uploaded-file-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  padding: 13px;
+  margin-bottom: 18px;
+
+  background: rgba(15, 35, 69, 0.76);
+
+  border:
+    1px solid rgba(96, 165, 250, 0.18);
+
+  border-radius: 13px;
+}
+
+.resume-animation .file-type-icon {
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  color: #ffffff;
+  background: #ef4444;
+
+  border-radius: 10px;
+
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.resume-animation .file-information {
+  min-width: 0;
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+
+.resume-animation .file-information strong {
+  overflow: hidden;
+
+  color: #ffffff;
+  font-size: 13px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-animation .file-information small {
+  color: #94a3b8;
+}
+
+.resume-animation .file-status {
+  padding: 7px 10px;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  border-radius: 9px;
+}
+
+.resume-animation .file-status.uploading {
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.16);
+}
+
+.resume-animation .file-status.scanning,
+.resume-animation .file-status.complete {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+}
+
+/* Upload and scan progress box */
+.resume-animation .progress-section {
+  padding: 20px;
+
+  background:
+    rgba(8, 24, 54, 0.66);
+
+  border:
+    1px solid rgba(96, 165, 250, 0.17);
+
+  border-radius: 16px;
+}
+
+.resume-animation .progress-heading,
+.resume-animation .score-bar > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resume-animation .progress-heading {
+  margin-bottom: 11px;
+}
+
+.resume-animation .progress-heading span {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.resume-animation .progress-heading strong {
+  color: #34d399;
+  font-size: 22px;
+}
+
+.resume-animation .progress-track,
+.resume-animation .score-bar-track {
+  overflow: hidden;
+  background: rgba(71, 85, 105, 0.5);
+  border-radius: 20px;
+}
+
+.resume-animation .progress-track {
+  height: 9px;
+}
+
+.resume-animation .progress-track span,
+.resume-animation .score-bar-track span {
+  display: block;
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      #2563eb,
+      #22d3ee,
+      #34d399
+    );
+
+  border-radius: inherit;
+
+  box-shadow:
+    0 0 15px rgba(52, 211, 153, 0.38);
+
+  transition:
+    width 0.1s linear;
+}
+
+.resume-animation .progress-section p {
+  margin: 12px 0 0;
+
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Result view */
+.resume-animation .scan-result-panel {
+  text-align: center;
+
+  animation:
+    atsResultReveal
+    0.7s
+    cubic-bezier(0.16, 1, 0.3, 1)
+    both;
+}
+
+.resume-animation .ats-score-ring {
+  --score: 0deg;
+
+  width: 145px;
+  height: 145px;
+
+  display: grid;
+  place-items: center;
+
+  margin: 0 auto 17px;
+
+  background:
+    conic-gradient(
+      #34d399 0deg,
+      #22d3ee var(--score),
+      rgba(51, 65, 85, 0.65) var(--score),
+      rgba(51, 65, 85, 0.65) 360deg
+    );
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 45px rgba(52, 211, 153, 0.24),
+    inset 0 0 25px rgba(255, 255, 255, 0.05);
+
+  animation:
+    atsRingReveal 0.9s ease both;
+}
+
+.resume-animation .ats-score-ring > div {
+  width: 112px;
+  height: 112px;
+
+  display: grid;
+  place-content: center;
+
+  background: #08162f;
+  border-radius: 50%;
+}
+
+.resume-animation .ats-score-ring strong {
+  display: block;
+
+  color: #ffffff;
+
+  font-size: 42px;
+  line-height: 1;
+}
+
+.resume-animation .ats-score-ring small {
+  color: #94a3b8;
+}
+
+.resume-animation .scan-result-panel h3 {
+  margin: 0;
+
+  color: #34d399;
+  font-size: 22px;
+}
+
+.resume-animation .scan-result-panel > p {
+  margin: 7px 0 20px;
+
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Result score bars */
+.resume-animation .score-bar {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.resume-animation .score-bar > div:first-child {
+  margin-bottom: 7px;
+}
+
+.resume-animation .score-bar span,
+.resume-animation .score-bar strong {
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+.resume-animation .score-bar-track {
+  height: 7px;
+}
+
+/* Result sparkle animation */
+.resume-animation .result-celebration span {
+  position: absolute;
+  z-index: 3;
+
+  color: #38bdf8;
+  font-size: 20px;
+
+  animation:
+    atsCelebration 1.2s ease-in-out infinite;
+}
+
+.resume-animation .result-celebration span:nth-child(1) {
+  top: 30px;
+  left: 29%;
+}
+
+.resume-animation .result-celebration span:nth-child(2) {
+  top: 70px;
+  right: 26%;
+
+  color: #34d399;
+  animation-delay: 0.3s;
+}
+
+.resume-animation .result-celebration span:nth-child(3) {
+  right: 34%;
+  bottom: 30px;
+
+  color: #a78bfa;
+  animation-delay: 0.6s;
+}
+
+/* Text indicating that the animation card is clickable */
+.resume-animation .demo-click-hint {
+  width: fit-content;
+  max-width: 100%;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin: 18px auto 0;
+  padding: 10px 14px;
+
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.13);
+
+  border:
+    1px solid rgba(96, 165, 250, 0.25);
+
+  border-radius: 10px;
+
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+}
+
+/* =========================================================
+   IMPORTANT:
+   Disable every real upload control inside the LANDING card.
+
+   This does not affect the dashboard Analyze Resume uploader.
+   ========================================================= */
+
+.resume-animation input[type="file"],
+.resume-animation .upload-drop-zone,
+.resume-animation .scan-primary-button,
+.resume-animation .scan-secondary-button {
+  display: none !important;
+}
+
+/* Keep dashboard upload controls working normally */
+.analyze-panel .upload-dropzone {
+  display: block;
+}
+
+.analyze-panel .upload-dropzone input[type="file"] {
+  display: none;
+}
+
+.analyze-panel .upload-dropzone .secondary-button {
+  display: inline-flex;
+}
+
+/* Animation keyframes */
+@keyframes atsScanContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes atsDocumentFloat {
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(-1deg);
+  }
+
+  50% {
+    transform:
+      translateY(-8px)
+      rotate(1deg);
+  }
+}
+
+@keyframes atsUploadPulse {
+  0%,
+  100% {
+    opacity: 0.68;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform:
+      translateY(-6px)
+      scale(1.04);
+  }
+}
+
+@keyframes atsScanDocument {
+  0% {
+    top: 8%;
+  }
+
+  50% {
+    top: 88%;
+  }
+
+  100% {
+    top: 8%;
+  }
+}
+
+@keyframes atsDataFlow {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 52px 0;
+  }
+}
+
+@keyframes atsResultReveal {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(18px)
+      scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes atsRingReveal {
+  from {
+    opacity: 0;
+
+    transform:
+      scale(0.65)
+      rotate(-90deg);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      scale(1)
+      rotate(0);
+  }
+}
+
+@keyframes atsCelebration {
+  0%,
+  100% {
+    opacity: 0.45;
+
+    transform:
+      translateY(0)
+      scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform:
+      translateY(-9px)
+      scale(1.2);
+  }
+}
+
+/* Tablet */
+@media (max-width: 1180px) {
+  .hero-animation-wrap {
+    width: min(100%, 760px);
+    margin: 0 auto;
+  }
+
+  .resume-animation {
+    max-width: 760px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .resume-animation {
+    min-height: auto;
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .resume-animation .scan-step-header {
+    gap: 8px;
+  }
+
+  .resume-animation .scan-step-header span {
+    font-size: 10px;
+    letter-spacing: 0.07em;
+  }
+
+  .resume-animation .scan-animation-content {
+    min-height: 390px;
+  }
+
+  .resume-animation .document-animation.is-scanning::before,
+  .resume-animation .document-animation.is-scanning::after {
+    width: 72px;
+  }
+
+  .resume-animation .uploaded-file-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .resume-animation .file-information {
+    max-width: calc(100% - 58px);
+  }
+
+  .resume-animation .file-status {
+    margin-left: 55px;
+  }
+
+  .resume-animation .demo-click-hint {
+    width: 100%;
+  }
+}
+
+/* Small phones */
+@media (max-width: 430px) {
+  .resume-animation {
+    padding: 14px;
+  }
+
+  .resume-animation .scan-step-header {
+    margin-bottom: 17px;
+  }
+
+  .resume-animation .scan-step-header span {
+    font-size: 9px;
+  }
+
+  .resume-animation .scan-animation-content {
+    min-height: 365px;
+  }
+
+  .resume-animation .document-animation {
+    min-height: 190px;
+  }
+
+  .resume-animation .document-sheet {
+    width: 116px;
+    height: 156px;
+  }
+
+  .resume-animation .demo-upload-symbol {
+    width: 38px;
+    height: 38px;
+  }
+
+  .resume-animation .ats-score-ring {
+    width: 132px;
+    height: 132px;
+  }
+
+  .resume-animation .ats-score-ring > div {
+    width: 101px;
+    height: 101px;
+  }
+}
+
+/* Accessibility: stop movement when reduced motion is enabled */
+@media (prefers-reduced-motion: reduce) {
+  .resume-animation *,
+  .resume-animation *::before,
+  .resume-animation *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =========================================================
+   FINAL FIX — Keep the complete ATS result fully visible
+   inside the landing animation card.
+   ========================================================= */
+
+.resume-animation {
+  height: 540px;
+  min-height: 540px;
+  max-height: 540px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.resume-animation .scan-step-header {
+  flex: 0 0 auto;
+  margin-bottom: 14px;
+}
+
+.resume-animation .scan-animation-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* During the results stage, remove the large document preview
+   so the complete score and all metrics fit inside the card. */
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .document-animation {
+  display: none;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete) {
+  justify-content: flex-start;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .uploaded-file-row {
+  flex: 0 0 auto;
+  margin-bottom: 10px;
+  padding: 9px 11px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .file-type-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .scan-result-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 2px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .ats-score-ring {
+  width: 104px;
+  height: 104px;
+  flex: 0 0 auto;
+  margin: 0 auto 8px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .ats-score-ring > div {
+  width: 78px;
+  height: 78px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .ats-score-ring strong {
+  font-size: 28px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .scan-result-panel h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .scan-result-panel > p {
+  margin: 4px 0 9px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .score-bar {
+  width: 100%;
+  margin-bottom: 7px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .score-bar > div:first-child {
+  margin-bottom: 3px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .score-bar span,
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .score-bar strong {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .score-bar-track {
+  height: 5px;
+}
+
+.resume-animation
+  .scan-animation-content:has(.file-status.complete)
+  .demo-click-hint {
+  flex: 0 0 auto;
+  width: fit-content;
+  margin: 8px auto 0;
+  padding: 6px 10px;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+/* Keep upload and scanning stages comfortably inside the same card. */
+.resume-animation
+  .scan-animation-content:not(:has(.file-status.complete))
+  .document-animation {
+  min-height: 155px;
+  max-height: 155px;
+  margin-bottom: 10px;
+}
+
+.resume-animation
+  .scan-animation-content:not(:has(.file-status.complete))
+  .document-sheet {
+  width: 112px;
+  height: 146px;
+}
+
+.resume-animation
+  .scan-animation-content:not(:has(.file-status.complete))
+  .uploaded-file-row {
+  margin-bottom: 10px;
+  padding: 10px;
+}
+
+.resume-animation
+  .scan-animation-content:not(:has(.file-status.complete))
+  .progress-section {
+  padding: 14px;
+}
+
+/* Tablet */
+@media (max-width: 1180px) {
+  .resume-animation {
+    height: 540px;
+    min-height: 540px;
+    max-height: 540px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .resume-animation {
+    height: 510px;
+    min-height: 510px;
+    max-height: 510px;
+    padding: 16px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .ats-score-ring {
+    width: 94px;
+    height: 94px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .ats-score-ring > div {
+    width: 70px;
+    height: 70px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .ats-score-ring strong {
+    font-size: 24px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 430px) {
+  .resume-animation {
+    height: 490px;
+    min-height: 490px;
+    max-height: 490px;
+    padding: 13px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .uploaded-file-row {
+    margin-bottom: 7px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .score-bar {
+    margin-bottom: 5px;
+  }
+
+  .resume-animation
+    .scan-animation-content:has(.file-status.complete)
+    .demo-click-hint {
+    margin-top: 5px;
+    font-size: 8px;
+  }
+}
+
+/* =========================================================
+   PREMIUM LOWER LANDING SECTION
+   Vertical 3-step flow + dark pricing + secure OTP card
+   ========================================================= */
+
+.premium-lower-grid {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
+}
+
+.premium-steps-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 620px;
+  padding: 34px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.1), transparent 25%),
+    radial-gradient(circle at 88% 88%, rgba(14, 165, 233, 0.08), transparent 30%),
+    linear-gradient(145deg, #ffffff 0%, #f8fbff 58%, #f3f8ff 100%);
+  border: 1px solid #d8e6fa;
+  border-radius: 24px;
+  box-shadow: 0 22px 58px rgba(15, 23, 42, 0.08);
+}
+
+.premium-steps-card::before {
+  position: absolute;
+  right: -90px;
+  bottom: -120px;
+  width: 390px;
+  height: 260px;
+  content: "";
+  opacity: 0.6;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(59, 130, 246, 0.16) 0 2px,
+      transparent 3px 15px
+    );
+  transform: rotate(-5deg) scaleX(1.4);
+  pointer-events: none;
+}
+
+.premium-steps-heading {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 30px;
+}
+
+.premium-steps-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+}
+
+.premium-heading-line {
+  display: block;
+  width: 48px;
+  height: 4px;
+  margin-top: 16px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 999px;
+}
+
+.vertical-process {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 18px;
+  padding-left: 58px;
+}
+
+.vertical-process-line {
+  position: absolute;
+  top: 16px;
+  bottom: 56px;
+  left: 20px;
+  width: 2px;
+  background:
+    linear-gradient(
+      180deg,
+      #2563eb 0%,
+      #6366f1 48%,
+      #10b981 100%
+    );
+  border-radius: 999px;
+  opacity: 0.75;
+}
+
+.vertical-process-step {
+  position: relative;
+}
+
+.vertical-step-number {
+  position: absolute;
+  top: 50%;
+  left: -58px;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 950;
+  transform: translateY(-50%);
+  box-shadow:
+    0 12px 26px rgba(37, 99, 235, 0.28),
+    0 0 0 1px #bfdbfe;
+}
+
+.process-analysis .vertical-step-number {
+  background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+  box-shadow:
+    0 12px 26px rgba(124, 58, 237, 0.25),
+    0 0 0 1px #ddd6fe;
+}
+
+.process-improve .vertical-step-number {
+  background: linear-gradient(145deg, #10b981, #047857);
+  box-shadow:
+    0 12px 26px rgba(16, 185, 129, 0.25),
+    0 0 0 1px #a7f3d0;
+}
+
+.vertical-step-card {
+  min-height: 138px;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) minmax(150px, 0.72fr);
+  gap: 18px;
+  align-items: center;
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.vertical-step-card:hover {
+  transform: translateY(-4px);
+  border-color: #93c5fd;
+  box-shadow:
+    0 24px 48px rgba(37, 99, 235, 0.13),
+    0 0 0 5px rgba(59, 130, 246, 0.05);
+}
+
+.vertical-step-icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  color: #2563eb;
+  background: linear-gradient(145deg, #ffffff, #eaf3ff);
+  border: 1px solid #bfdbfe;
+  border-radius: 50%;
+  box-shadow:
+    0 12px 28px rgba(37, 99, 235, 0.15),
+    inset 0 0 0 8px rgba(255, 255, 255, 0.55);
+}
+
+.process-analysis .vertical-step-icon {
+  color: #7c3aed;
+  background: linear-gradient(145deg, #ffffff, #f3e8ff);
+  border-color: #ddd6fe;
+  box-shadow:
+    0 12px 28px rgba(124, 58, 237, 0.15),
+    inset 0 0 0 8px rgba(255, 255, 255, 0.55);
+}
+
+.process-improve .vertical-step-icon {
+  color: #059669;
+  background: linear-gradient(145deg, #ffffff, #e8fff6);
+  border-color: #a7f3d0;
+  box-shadow:
+    0 12px 28px rgba(5, 150, 105, 0.15),
+    inset 0 0 0 8px rgba(255, 255, 255, 0.55);
+}
+
+.vertical-step-copy h3 {
+  margin: 0 0 7px;
+  color: #0f172a;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.vertical-step-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.vertical-step-benefits {
+  display: grid;
+  gap: 8px;
+}
+
+.vertical-step-benefits span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 11px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.process-analysis .vertical-step-benefits span {
+  color: #6d28d9;
+  background: #f5f3ff;
+  border-color: #ede9fe;
+}
+
+.process-improve .vertical-step-benefits span {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #d1fae5;
+}
+
+.process-flight-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: -2px;
+  padding-left: 8px;
+  color: #2563eb;
+}
+
+.process-flight-path span {
+  flex: 1;
+  height: 2px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #60a5fa 0 6px,
+      transparent 6px 12px
+    );
+}
+
+.premium-pricing-login {
+  display: grid;
+  gap: 20px;
+}
+
+.premium-pricing-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 308px;
+  padding: 32px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 88% 28%, rgba(37, 99, 235, 0.35), transparent 28%),
+    linear-gradient(145deg, #071631 0%, #0a1f49 60%, #102c68 100%);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 24px;
+  box-shadow:
+    0 28px 70px rgba(2, 8, 23, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.premium-pricing-card::after {
+  position: absolute;
+  right: -50px;
+  bottom: -40px;
+  width: 260px;
+  height: 190px;
+  content: "";
+  opacity: 0.28;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(96, 165, 250, 0.32) 0 2px,
+      transparent 3px 13px
+    );
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.premium-plan-label {
+  width: fit-content;
+  padding: 7px 12px;
+  color: #c4b5fd;
+  background: rgba(109, 40, 217, 0.28);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.premium-pricing-heading {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.premium-pricing-heading h2 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: clamp(26px, 2.5vw, 34px);
+  letter-spacing: -0.05em;
+}
+
+.premium-pricing-heading p {
+  margin: 0;
+  color: #b8c7e6;
+  font-size: 14px;
+}
+
+.premium-gem {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #93c5fd;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(147, 197, 253, 0.18);
+  border-radius: 22px;
+  box-shadow:
+    0 18px 38px rgba(37, 99, 235, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.premium-price-box {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  margin-top: 24px;
+  padding: 18px;
+  background: rgba(3, 12, 30, 0.45);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 18px;
+}
+
+.premium-price-value {
+  padding-right: 20px;
+  border-right: 1px solid rgba(191, 219, 254, 0.18);
+}
+
+.premium-price-value span {
+  display: block;
+  color: #dbeafe;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.premium-price-value strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 54px;
+  line-height: 1;
+  letter-spacing: -0.07em;
+}
+
+.premium-price-box ul {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.premium-price-box li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #eef4ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.premium-price-box li svg {
+  color: #60a5fa;
+  flex: 0 0 auto;
+}
+
+.premium-login-card {
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.1), transparent 30%),
+    linear-gradient(145deg, #ffffff 0%, #fbfbff 60%, #f5f3ff 100%);
+  border: 1px solid #ddd6fe;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+.premium-login-card::after {
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  width: 120px;
+  height: 80px;
+  content: "";
+  opacity: 0.3;
+  background:
+    radial-gradient(circle, #8b5cf6 1.2px, transparent 1.2px)
+    0 0 / 12px 12px;
+  pointer-events: none;
+}
+
+.premium-login-heading {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.premium-login-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #6d28d9;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 16px;
+}
+
+.premium-login-heading .eyebrow {
+  margin-bottom: 4px;
+  color: #6d28d9;
+}
+
+.premium-login-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  letter-spacing: -0.04em;
+}
+
+.premium-login-heading span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.premium-input-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0 15px;
+  background: #ffffff;
+  border: 1px solid #d8e2f1;
+  border-radius: 14px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.premium-input-label:focus-within {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.premium-input-label > svg {
+  color: #64748b;
+  flex: 0 0 auto;
+}
+
+.premium-input-label input {
+  margin: 0;
+  padding: 15px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.premium-input-label input:focus {
+  box-shadow: none;
+}
+
+.premium-login-button {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 14px;
+  padding: 0 18px;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 14px;
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.24);
+}
+
+.premium-otp-actions {
+  margin-top: 14px;
+}
+
+.premium-otp-actions .premium-login-button,
+.premium-otp-actions .secondary-button {
+  min-height: 50px;
+}
+
+.premium-change-email {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.premium-login-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.premium-login-note svg {
+  color: #6d28d9;
+}
+
+.premium-login-note i {
+  width: 4px;
+  height: 4px;
+  background: #94a3b8;
+  border-radius: 50%;
+}
+
+@media (max-width: 1180px) {
+  .premium-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-steps-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .premium-steps-card,
+  .premium-pricing-card,
+  .premium-login-card {
+    padding: 22px;
+  }
+
+  .vertical-process {
+    padding-left: 50px;
+  }
+
+  .vertical-step-number {
+    left: -50px;
+  }
+
+  .vertical-step-card {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .vertical-step-benefits {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .vertical-step-icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .premium-pricing-heading {
+    display: grid;
+  }
+
+  .premium-gem {
+    width: 64px;
+    height: 64px;
+  }
+
+  .premium-price-box {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-price-value {
+    padding-right: 0;
+    padding-bottom: 16px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(191, 219, 254, 0.18);
+  }
+
+  .premium-price-value strong {
+    font-size: 46px;
+  }
+}
+
+@media (max-width: 480px) {
+  .premium-steps-card,
+  .premium-pricing-card,
+  .premium-login-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .vertical-process {
+    padding-left: 42px;
+  }
+
+  .vertical-process-line {
+    left: 17px;
+  }
+
+  .vertical-step-number {
+    left: -42px;
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .vertical-step-card {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .vertical-step-icon {
+    margin: 0 auto;
+  }
+
+  .vertical-step-copy {
+    text-align: center;
+  }
+
+  .vertical-step-benefits {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-login-heading {
+    display: grid;
+  }
+
+  .premium-login-note {
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================================
+   FINAL DESIGN FIX
+   - Restore animated left-side 3-step design
+   - Fix pricing heading and login input text visibility
+   ========================================================= */
+
+/* ---------- LEFT SIDE: animated 3-step section ---------- */
+.premium-steps-card {
+  position: relative;
+  overflow: hidden;
+  padding: 30px;
+  border: 1px solid #cfe0fb;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(37, 99, 235, 0.1), transparent 24%),
+    linear-gradient(145deg, #ffffff 0%, #f8fbff 58%, #edf5ff 100%);
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.premium-steps-card::before {
+  content: "";
+  position: absolute;
+  left: -60px;
+  right: -60px;
+  bottom: -90px;
+  height: 190px;
+  opacity: 0.45;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(59, 130, 246, 0.16) 0 2px,
+      transparent 3px 16px
+    );
+  transform: scaleX(1.45);
+  pointer-events: none;
+}
+
+.premium-steps-heading {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 26px;
+}
+
+.premium-steps-heading .eyebrow {
+  color: #2563eb;
+}
+
+.premium-steps-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.premium-heading-line {
+  display: block;
+  width: 76px;
+  height: 4px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.vertical-process {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 18px;
+  padding-left: 48px;
+}
+
+.vertical-process-line {
+  position: absolute;
+  top: 18px;
+  bottom: 22px;
+  left: 23px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2563eb, #7c3aed, #10b981);
+  opacity: 0.22;
+}
+
+.vertical-process-step {
+  position: relative;
+  animation: processFloat 5.6s ease-in-out infinite;
+}
+
+.process-upload {
+  animation-delay: 0s;
+}
+
+.process-analysis {
+  animation-delay: 0.7s;
+}
+
+.process-improve {
+  animation-delay: 1.4s;
+}
+
+.vertical-step-number {
+  position: absolute;
+  left: -48px;
+  top: 26px;
+  z-index: 3;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 900;
+  border: 4px solid #ffffff;
+  box-shadow:
+    0 12px 24px rgba(37, 99, 235, 0.22),
+    0 0 0 1px #bfdbfe;
+}
+
+.process-upload .vertical-step-number {
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+}
+
+.process-analysis .vertical-step-number {
+  background: linear-gradient(145deg, #8b5cf6, #7c3aed);
+}
+
+.process-improve .vertical-step-number {
+  background: linear-gradient(145deg, #10b981, #059669);
+}
+
+.vertical-step-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 146px;
+  padding: 20px 20px 18px;
+  border-radius: 22px;
+  border: 1px solid #dbeafe;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 16px 34px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.vertical-step-card:hover {
+  transform: translateY(-4px);
+  border-color: #93c5fd;
+  box-shadow:
+    0 22px 42px rgba(37, 99, 235, 0.12),
+    0 0 0 4px rgba(59, 130, 246, 0.04);
+}
+
+.vertical-step-icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  border: 1px solid #bfdbfe;
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff, #eff6ff 66%, #dbeafe);
+  color: #2563eb;
+  box-shadow:
+    0 12px 26px rgba(37, 99, 235, 0.12),
+    inset 0 0 0 8px rgba(255, 255, 255, 0.55);
+}
+
+.process-analysis .vertical-step-icon {
+  color: #7c3aed;
+  border-color: #ddd6fe;
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff, #f5f3ff 66%, #ede9fe);
+}
+
+.process-improve .vertical-step-icon {
+  color: #059669;
+  border-color: #a7f3d0;
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff, #ecfdf5 66%, #d1fae5);
+}
+
+.vertical-step-copy h3 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.vertical-step-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.vertical-step-benefits {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding-top: 4px;
+}
+
+.vertical-step-benefits span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.process-upload .vertical-step-benefits span {
+  color: #1d4ed8;
+  background: rgba(219, 234, 254, 0.85);
+}
+
+.process-analysis .vertical-step-benefits span {
+  color: #6d28d9;
+  background: rgba(237, 233, 254, 0.9);
+}
+
+.process-improve .vertical-step-benefits span {
+  color: #047857;
+  background: rgba(209, 250, 229, 0.9);
+}
+
+.process-flight-path {
+  display: none;
+}
+
+@keyframes processFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ---------- RIGHT SIDE: fix invisible pricing text ---------- */
+.premium-pricing-card {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(37, 99, 235, 0.1), transparent 28%),
+    linear-gradient(145deg, #ffffff 0%, #eff6ff 100%) !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+.premium-plan-label {
+  color: #1d4ed8 !important;
+  background: rgba(219, 234, 254, 0.9) !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+.premium-pricing-heading h2 {
+  color: #0f172a !important;
+}
+
+.premium-pricing-heading p {
+  color: #64748b !important;
+}
+
+.premium-gem {
+  color: #2563eb !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid #dbeafe !important;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.12) !important;
+}
+
+.premium-price-box {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+.premium-price-value {
+  border-right: 1px solid #dbeafe !important;
+}
+
+.premium-price-value span {
+  color: #334155 !important;
+}
+
+.premium-price-value strong {
+  color: #2563eb !important;
+}
+
+.premium-price-box li {
+  color: #0f172a !important;
+}
+
+.premium-price-box li svg {
+  color: #2563eb !important;
+}
+
+/* ---------- LOGIN visibility fix ---------- */
+.premium-login-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.1), transparent 30%),
+    linear-gradient(145deg, #ffffff 0%, #fbfbff 60%, #f5f3ff 100%) !important;
+}
+
+.premium-login-heading h2 {
+  color: #0f172a !important;
+}
+
+.premium-login-heading span {
+  color: #64748b !important;
+}
+
+.premium-input-label {
+  background: #ffffff !important;
+  border: 1px solid #d8e2f1 !important;
+}
+
+.premium-input-label > svg {
+  color: #64748b !important;
+}
+
+.premium-input-label input {
+  color: #0f172a !important;
+  background: transparent !important;
+}
+
+.premium-input-label input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .vertical-process {
+    padding-left: 42px;
+  }
+
+  .vertical-step-number {
+    left: -42px;
+  }
+
+  .vertical-process-line {
+    left: 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  .premium-steps-card {
+    padding: 22px;
+  }
+
+  .vertical-process {
+    gap: 14px;
+    padding-left: 36px;
+  }
+
+  .vertical-process-line {
+    left: 16px;
+  }
+
+  .vertical-step-number {
+    left: -36px;
+    width: 38px;
+    height: 38px;
+    font-size: 11px;
+  }
+
+  .vertical-step-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .vertical-step-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .vertical-step-benefits {
+    gap: 8px;
+  }
+
+  .premium-price-value {
+    padding-right: 0 !important;
+    padding-bottom: 16px;
+    border-right: 0 !important;
+    border-bottom: 1px solid #dbeafe !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .vertical-step-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .vertical-step-icon {
+    margin: 0 auto;
+  }
+
+  .vertical-step-benefits {
+    justify-content: center;
+  }
+}
+
+/* =========================================================
+   FINAL OTP INPUT FOCUS FIX
+   Removes the extra blue rectangle while keeping a clean,
+   subtle border highlight on the premium OTP/email field.
+   ========================================================= */
+
+.premium-input-label {
+  outline: none !important;
+}
+
+.premium-input-label:focus,
+.premium-input-label:focus-visible,
+.premium-input-label:focus-within {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08) !important;
+}
+
+.premium-input-label input,
+.premium-input-label input:focus,
+.premium-input-label input:focus-visible,
+.premium-input-label input:active {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Preserve keyboard focus styling everywhere else */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:not(.premium-input-label input):focus-visible {
+  outline: 4px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   FINAL HORIZONTAL 3-STEP ATS ANIMATION
+   Matches App-horizontal-steps.tsx
+   ========================================================= */
+
+.horizontal-steps-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 590px;
+  padding: 30px;
+  border: 1px solid #cfe0fb;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(37, 99, 235, 0.1), transparent 25%),
+    linear-gradient(145deg, #ffffff 0%, #f8fbff 60%, #eef5ff 100%);
+  box-shadow:
+    0 18px 44px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.horizontal-steps-card::before {
+  content: "";
+  position: absolute;
+  left: -80px;
+  right: -80px;
+  bottom: -110px;
+  height: 230px;
+  opacity: 0.5;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(59, 130, 246, 0.18) 0 2px,
+      transparent 3px 15px
+    );
+  transform: scaleX(1.5);
+  pointer-events: none;
+}
+
+.horizontal-steps-heading {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.horizontal-steps-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.horizontal-steps-intro {
+  max-width: 590px;
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.horizontal-value-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 11px 15px;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.92);
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow:
+    0 12px 26px rgba(37, 99, 235, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.horizontal-progress-line {
+  position: relative;
+  z-index: 2;
+  width: calc(100% - 160px);
+  height: 4px;
+  margin: 66px auto -56px;
+  overflow: visible;
+  background: repeating-linear-gradient(
+    90deg,
+    #93c5fd 0 7px,
+    transparent 7px 14px
+  );
+}
+
+.horizontal-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #10b981);
+  box-shadow: 0 0 18px rgba(124, 58, 237, 0.48);
+  animation: horizontalLineTravel 6s ease-in-out infinite;
+}
+
+.horizontal-progress-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #2563eb;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.horizontal-progress-dot.dot-one {
+  left: 33.333%;
+}
+
+.horizontal-progress-dot.dot-two {
+  left: 66.666%;
+}
+
+.horizontal-step-grid {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+  margin-top: 28px;
+}
+
+.horizontal-step-card {
+  position: relative;
+  min-width: 0;
+  min-height: 370px;
+  padding: 72px 22px 24px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #dbeafe;
+  border-radius: 24px;
+  box-shadow:
+    0 16px 38px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+  animation: horizontalCardGlow 6s ease-in-out infinite;
+}
+
+.step-analysis-card {
+  animation-delay: 2s;
+}
+
+.step-improve-card {
+  animation-delay: 4s;
+}
+
+.horizontal-step-card:hover {
+  transform: translateY(-7px);
+  border-color: #93c5fd;
+  box-shadow:
+    0 24px 50px rgba(37, 99, 235, 0.14),
+    0 0 0 5px rgba(59, 130, 246, 0.05);
+}
+
+.horizontal-step-number {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  z-index: 5;
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 950;
+  transform: translateX(-50%);
+  box-shadow:
+    0 12px 24px rgba(37, 99, 235, 0.26),
+    0 0 0 1px #bfdbfe;
+}
+
+.step-upload-card .horizontal-step-number {
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+}
+
+.step-analysis-card .horizontal-step-number {
+  background: linear-gradient(145deg, #8b5cf6, #7c3aed);
+}
+
+.step-improve-card .horizontal-step-number {
+  background: linear-gradient(145deg, #10b981, #059669);
+}
+
+.horizontal-step-icon {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.horizontal-step-icon svg {
+  position: relative;
+  z-index: 3;
+}
+
+.step-upload-card .horizontal-step-icon {
+  color: #2563eb;
+  background:
+    radial-gradient(circle at 38% 32%, #ffffff, #eff6ff 64%, #dbeafe);
+  border: 1px solid #bfdbfe;
+  box-shadow:
+    0 16px 34px rgba(37, 99, 235, 0.16),
+    inset 0 0 0 11px rgba(255, 255, 255, 0.58);
+}
+
+.step-analysis-card .horizontal-step-icon {
+  color: #7c3aed;
+  background:
+    radial-gradient(circle at 38% 32%, #ffffff, #f5f3ff 64%, #ede9fe);
+  border: 1px solid #ddd6fe;
+  box-shadow:
+    0 16px 34px rgba(124, 58, 237, 0.17),
+    inset 0 0 0 11px rgba(255, 255, 255, 0.58);
+}
+
+.step-improve-card .horizontal-step-icon {
+  color: #059669;
+  background:
+    radial-gradient(circle at 38% 32%, #ffffff, #ecfdf5 64%, #d1fae5);
+  border: 1px solid #a7f3d0;
+  box-shadow:
+    0 16px 34px rgba(5, 150, 105, 0.16),
+    inset 0 0 0 11px rgba(255, 255, 255, 0.58);
+}
+
+.horizontal-icon-pulse,
+.horizontal-scan-ring,
+.horizontal-success-ring {
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+}
+
+.horizontal-icon-pulse {
+  border: 2px solid rgba(59, 130, 246, 0.44);
+  animation: horizontalUploadPulse 2s ease-out infinite;
+}
+
+.horizontal-scan-ring {
+  inset: 16px;
+  border: 2px dashed rgba(124, 58, 237, 0.52);
+  animation: horizontalScanRotate 4.5s linear infinite;
+}
+
+.horizontal-success-ring {
+  border: 2px solid rgba(16, 185, 129, 0.42);
+  animation: horizontalSuccessPulse 2.2s ease-in-out infinite;
+}
+
+.horizontal-step-card h3 {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.horizontal-step-card > p {
+  min-height: 96px;
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.horizontal-step-benefit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.step-upload-card .horizontal-step-benefit {
+  color: #1d4ed8;
+}
+
+.step-analysis-card .horizontal-step-benefit {
+  color: #6d28d9;
+}
+
+.step-improve-card .horizontal-step-benefit {
+  color: #047857;
+}
+
+@keyframes horizontalLineTravel {
+  0% {
+    width: 12%;
+    transform: translateX(0);
+  }
+
+  33% {
+    width: 36%;
+    transform: translateX(0);
+  }
+
+  66% {
+    width: 36%;
+    transform: translateX(88%);
+  }
+
+  100% {
+    width: 16%;
+    transform: translateX(510%);
+  }
+}
+
+@keyframes horizontalCardGlow {
+  0%,
+  24%,
+  100% {
+    transform: translateY(0);
+    border-color: #dbeafe;
+    box-shadow:
+      0 16px 38px rgba(15, 23, 42, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  }
+
+  10% {
+    transform: translateY(-7px);
+    border-color: #60a5fa;
+    box-shadow:
+      0 24px 52px rgba(37, 99, 235, 0.15),
+      0 0 0 5px rgba(59, 130, 246, 0.05);
+  }
+}
+
+@keyframes horizontalUploadPulse {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.86);
+  }
+
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes horizontalScanRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes horizontalSuccessPulse {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 26px rgba(16, 185, 129, 0.28);
+  }
+}
+
+@media (max-width: 1180px) {
+  .horizontal-steps-heading {
+    display: grid;
+  }
+
+  .horizontal-value-badge {
+    width: fit-content;
+  }
+
+  .horizontal-progress-line {
+    display: none;
+  }
+
+  .horizontal-step-grid {
+    grid-template-columns: 1fr;
+    gap: 34px;
+    margin-top: 38px;
+  }
+
+  .horizontal-step-card {
+    min-height: auto;
+  }
+
+  .horizontal-step-card > p {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .horizontal-steps-card {
+    min-height: auto;
+    padding: 22px;
+  }
+
+  .horizontal-steps-heading h2 {
+    font-size: 28px;
+  }
+
+  .horizontal-value-badge {
+    white-space: normal;
+  }
+
+  .horizontal-step-card {
+    padding: 66px 18px 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .horizontal-step-icon {
+    width: 96px;
+    height: 96px;
+  }
+
+  .horizontal-step-card h3 {
+    font-size: 18px;
+  }
+
+  .horizontal-step-card > p {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .horizontal-step-card,
+  .horizontal-progress-fill,
+  .horizontal-icon-pulse,
+  .horizontal-scan-ring,
+  .horizontal-success-ring {
+    animation: none !important;
+  }
+}
+

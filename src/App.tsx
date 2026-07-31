@@ -2,23 +2,29 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import {
   ArrowRight,
   BarChart3,
+  BrainCircuit,
   CheckCircle2,
   CirclePlay,
+  CloudUpload,
   CreditCard,
-  Database,
   Download,
   FileSearch,
+  Gem,
   History,
   LayoutDashboard,
   LockKeyhole,
   LogOut,
+  Mail,
+  Send,
   ShieldCheck,
   Sparkles,
   Star,
   Target,
   TrendingUp,
   Upload,
+  Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 
 import LandingScanAnimation from "./LandingScanAnimation";
@@ -423,10 +429,6 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [resendSeconds, setResendSeconds] = useState(0);
-
-  const [serverStatus, setServerStatus] = useState("Checking backend...");
-  const [supabaseStatus, setSupabaseStatus] = useState("Checking Supabase...");
-
   const [user, setUser] = useState<User | null>(null);
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [jobRoles, setJobRoles] = useState<JobRole[]>([]);
@@ -504,16 +506,6 @@ export default function App() {
   }
 
   useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then((data) => setServerStatus(data.message || "API online"))
-      .catch(() => setServerStatus("API offline"));
-
-    fetch("/api/supabase/health")
-      .then((res) => res.json())
-      .then((data) => setSupabaseStatus(data.message || "Supabase online"))
-      .catch(() => setSupabaseStatus("Supabase offline"));
-
     loadPublicData().catch(console.error);
   }, []);
 
@@ -561,7 +553,7 @@ export default function App() {
       setOtp("");
       setOtpSent(true);
       setResendSeconds(30);
-      setAuthMessage("OTP sent. Check your email.");
+      setAuthMessage("OTP sent. Check your email. If you don’t see it, check your spam or junk folder.");
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Could not send OTP.");
     } finally {
@@ -829,16 +821,6 @@ export default function App() {
           </div>
 
           <div className="nav-actions">
-            <span className="status-chip" title={serverStatus}>
-              <span className="status-dot" />
-              API Online
-            </span>
-
-            <span className="status-chip" title={supabaseStatus}>
-              <span className="status-dot" />
-              Database
-            </span>
-
             <button type="button" onClick={() => scrollToSection("login")}>
               Get Started <ArrowRight size={18} />
             </button>
@@ -915,97 +897,209 @@ export default function App() {
             </div>
           </section>
 
-          <section className="landing-lower-grid">
-            <div className="steps-card" id="how">
-              <p className="eyebrow">Simple process</p>
-              <h2>Get ATS-ready in 3 simple steps</h2>
-
-              <div className="step-flow">
+          <section className="landing-lower-grid premium-lower-grid">
+            <div
+              className="steps-card premium-steps-card horizontal-steps-card"
+              id="how"
+            >
+              <div className="horizontal-steps-heading">
                 <div>
-                  <span>1</span>
-                  <h3>Upload Your Resume</h3>
-                  <p>Upload your resume in PDF, DOCX, or TXT format.</p>
+                  <p className="eyebrow">How it works</p>
+                  <h2>Get ATS-ready in 3 simple steps</h2>
+                  <p className="horizontal-steps-intro">
+                    From resume upload to clear improvements, ATS Scan AI helps
+                    you understand what recruiters and tracking systems may notice.
+                  </p>
                 </div>
 
-                <div>
-                  <span>2</span>
-                  <h3>AI Analyzes & Scores</h3>
-                  <p>Our AI checks keywords, skills, formatting, and relevance.</p>
+                <div className="horizontal-value-badge">
+                  <Zap size={18} />
+                  <span>Fast, focused and actionable</span>
                 </div>
+              </div>
 
-                <div>
-                  <span>3</span>
-                  <h3>Improve & Apply</h3>
-                  <p>Follow actionable tips, boost your score, and apply confidently.</p>
-                </div>
+              <div className="horizontal-progress-line" aria-hidden="true">
+                <span className="horizontal-progress-fill" />
+                <i className="horizontal-progress-dot dot-one" />
+                <i className="horizontal-progress-dot dot-two" />
+              </div>
+
+              <div className="horizontal-step-grid">
+                <article className="horizontal-step-card step-upload-card">
+                  <span className="horizontal-step-number">1</span>
+
+                  <div className="horizontal-step-icon">
+                    <span className="horizontal-icon-pulse" aria-hidden="true" />
+                    <CloudUpload size={44} />
+                  </div>
+
+                  <h3>Upload Resume</h3>
+
+                  <p>
+                    Securely upload your resume in PDF, DOCX, or TXT format in
+                    seconds.
+                  </p>
+
+                  <div className="horizontal-step-benefit">
+                    <ShieldCheck size={19} />
+                    <span>Secure document handling</span>
+                  </div>
+                </article>
+
+                <article className="horizontal-step-card step-analysis-card">
+                  <span className="horizontal-step-number">2</span>
+
+                  <div className="horizontal-step-icon">
+                    <span className="horizontal-scan-ring" aria-hidden="true" />
+                    <BrainCircuit size={44} />
+                  </div>
+
+                  <h3>AI ATS Analysis</h3>
+
+                  <p>
+                    We check keywords, skills, formatting, role alignment, and
+                    possible ATS gaps.
+                  </p>
+
+                  <div className="horizontal-step-benefit">
+                    <BarChart3 size={19} />
+                    <span>Instant scoring insights</span>
+                  </div>
+                </article>
+
+                <article className="horizontal-step-card step-improve-card">
+                  <span className="horizontal-step-number">3</span>
+
+                  <div className="horizontal-step-icon">
+                    <span className="horizontal-success-ring" aria-hidden="true" />
+                    <TrendingUp size={44} />
+                  </div>
+
+                  <h3>Improve &amp; Apply</h3>
+
+                  <p>
+                    Use clear suggestions to strengthen your resume and apply
+                    with more confidence.
+                  </p>
+
+                  <div className="horizontal-step-benefit">
+                    <CheckCircle2 size={19} />
+                    <span>Actionable recommendations</span>
+                  </div>
+                </article>
               </div>
             </div>
 
-            <div className="pricing-login-card" id="pricing">
-              <div className="pricing-card">
-                <p className="eyebrow">Pay as you go</p>
-                <h2>Simple, transparent pricing</h2>
+            <div className="premium-pricing-login" id="pricing">
+              <section className="premium-pricing-card">
+                <div className="premium-plan-label">Premium plan</div>
 
-                <div className="price-row">
+                <div className="premium-pricing-heading">
                   <div>
-                    <span>10 Credits</span>
+                    <h2>Simple, transparent pricing</h2>
+                    <p>Pay once. Get real insights. No hidden fees.</p>
+                  </div>
+
+                  <div className="premium-gem" aria-hidden="true">
+                    <Gem size={46} />
+                  </div>
+                </div>
+
+                <div className="premium-price-box">
+                  <div className="premium-price-value">
+                    <span>{starterPackage?.credits ?? 10} Credits</span>
                     <strong>₹{starterPackage?.price_inr ?? 29}</strong>
                   </div>
 
                   <ul>
                     <li>
-                      <CheckCircle2 size={16} /> 1 credit = 1 resume analysis
+                      <CheckCircle2 size={18} />
+                      1 credit = 1 resume analysis
                     </li>
                     <li>
-                      <CheckCircle2 size={16} /> ATS score and feedback
+                      <CheckCircle2 size={18} />
+                      ATS score and feedback
                     </li>
                     <li>
-                      <CheckCircle2 size={16} /> History comparison
+                      <CheckCircle2 size={18} />
+                      History comparison
                     </li>
                     <li>
-                      <CheckCircle2 size={16} /> Downloadable report
+                      <CheckCircle2 size={18} />
+                      Downloadable report
                     </li>
                   </ul>
                 </div>
-              </div>
+              </section>
 
-              <div className="landing-login-card" id="login">
-                <p className="eyebrow">Start scanning</p>
-                <h2>Email OTP Login</h2>
+              <section className="premium-login-card" id="login">
+                <div className="premium-login-heading">
+                  <div className="premium-login-icon">
+                    <ShieldCheck size={25} />
+                  </div>
 
-                <label>Email address</label>
-                <input
-                  name="email"
-                  value={email}
-                  disabled={otpSent || authLoading}
-                  onChange={(event) => setEmail(event.target.value)}
-                  onKeyDown={handleAuthKeyDown}
-                  placeholder="you@example.com"
-                />
+                  <div>
+                    <p className="eyebrow">Secure login</p>
+                    <h2>Email OTP Login</h2>
+                    <span>
+                      Enter your email and we’ll send a one-time password.
+                    </span>
+                  </div>
+                </div>
+
+                <label className="premium-input-label">
+                  <Mail size={18} />
+                  <input
+                    name="email"
+                    value={email}
+                    disabled={otpSent || authLoading}
+                    onChange={(event) => setEmail(event.target.value)}
+                    onKeyDown={handleAuthKeyDown}
+                    placeholder="you@example.com"
+                    type="email"
+                    autoComplete="email"
+                  />
+                </label>
 
                 {otpSent && (
-                  <>
-                    <label>OTP code</label>
+                  <label className="premium-input-label">
+                    <LockKeyhole size={18} />
                     <input
                       name="otp"
                       value={otp}
                       onChange={(event) => setOtp(event.target.value)}
                       onKeyDown={handleAuthKeyDown}
                       placeholder="6 digit code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       autoFocus
                     />
-                  </>
+                  </label>
                 )}
 
                 {!otpSent ? (
-                  <button type="button" onClick={handleSendOtp} disabled={authLoading}>
-                    {authLoading ? "Sending OTP..." : "Send OTP"}
+                  <button
+                    type="button"
+                    className="premium-login-button"
+                    onClick={handleSendOtp}
+                    disabled={authLoading}
+                  >
+                    <span>{authLoading ? "Sending OTP..." : "Send OTP"}</span>
+                    <Send size={19} />
                   </button>
                 ) : (
                   <>
-                    <div className="otp-action-grid">
-                      <button type="button" onClick={handleVerifyOtp} disabled={authLoading}>
-                        {authLoading ? "Verifying..." : "Verify OTP"}
+                    <div className="otp-action-grid premium-otp-actions">
+                      <button
+                        type="button"
+                        className="premium-login-button"
+                        onClick={handleVerifyOtp}
+                        disabled={authLoading}
+                      >
+                        <span>
+                          {authLoading ? "Verifying..." : "Verify OTP"}
+                        </span>
+                        <ArrowRight size={19} />
                       </button>
 
                       <button
@@ -1014,13 +1108,15 @@ export default function App() {
                         onClick={handleResendOtp}
                         disabled={authLoading || resendSeconds > 0}
                       >
-                        {resendSeconds > 0 ? `Resend in ${resendSeconds}s` : "Resend OTP"}
+                        {resendSeconds > 0
+                          ? `Resend in ${resendSeconds}s`
+                          : "Resend OTP"}
                       </button>
                     </div>
 
                     <button
                       type="button"
-                      className="text-button"
+                      className="text-button premium-change-email"
                       onClick={handleChangeEmail}
                       disabled={authLoading}
                     >
@@ -1029,9 +1125,16 @@ export default function App() {
                   </>
                 )}
 
+                <div className="premium-login-note">
+                  <LockKeyhole size={14} />
+                  <span>We never share your email.</span>
+                  <i aria-hidden="true" />
+                  <span>OTP is sent to your inbox.</span>
+                </div>
+
                 {authMessage && <p className="success-text">{authMessage}</p>}
                 {authError && <p className="error-text">{authError}</p>}
-              </div>
+              </section>
             </div>
           </section>
 
@@ -1107,18 +1210,6 @@ export default function App() {
             <p className="eyebrow">Production dashboard</p>
             <h1>Resume Analyzer</h1>
             <p>Upload resumes, check ATS fit, compare scan history, and download reports.</p>
-          </div>
-
-          <div className="health-pills">
-            <span title={serverStatus}>
-              <ShieldCheck size={16} />
-              API Online
-            </span>
-
-            <span title={supabaseStatus}>
-              <Database size={16} />
-              Database
-            </span>
           </div>
         </header>
 

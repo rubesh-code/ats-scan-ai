@@ -2,18 +2,13 @@ import {
   useEffect,
   useRef,
   useState,
-  type ChangeEvent,
   type CSSProperties,
-  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
 } from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  FileSearch,
-  Upload,
-} from "lucide-react";
+import { CheckCircle2, FileSearch, Upload } from "lucide-react";
 
-type DemoStage = "idle" | "uploading" | "scanning" | "complete";
+type DemoStage = "uploading" | "scanning" | "complete";
 
 const DEMO_RESULT = {
   overall: 87,
@@ -23,397 +18,248 @@ const DEMO_RESULT = {
   experience: 90,
 };
 
+const DEMO_FILE_NAME = "Software_Engineer_Resume.pdf";
+const DEMO_FILE_SIZE = "245 KB";
+
 export default function LandingScanAnimation() {
-  const [stage, setStage] = useState<DemoStage>("idle");
+  const [stage, setStage] = useState<DemoStage>("uploading");
   const [progress, setProgress] = useState(0);
-  const [fileName, setFileName] = useState(
-    "Software_Engineer_Resume.pdf",
-  );
-  const [fileSize, setFileSize] = useState("245 KB");
-  const [dragging, setDragging] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const timerRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
 
-  function clearTimer() {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
+  function clearTimers() {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
   }
 
-  useEffect(() => {
-    return () => {
-      clearTimer();
-    };
-  }, []);
+  function scrollToLogin() {
+    document.getElementById("login")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
 
-  function runStage(
+  function handleCardClick(event: MouseEvent<HTMLElement>) {
+    event.preventDefault();
+    scrollToLogin();
+  }
+
+  function handleCardKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    scrollToLogin();
+  }
+
+  function schedule(callback: () => void, delay: number) {
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+
+      if (mountedRef.current) callback();
+    }, delay);
+  }
+
+  function animateProgress(
     nextStage: DemoStage,
     duration: number,
     onComplete: () => void,
   ) {
-    clearTimer();
+    clearTimers();
+
+    if (!mountedRef.current) return;
+
     setStage(nextStage);
     setProgress(0);
 
-    const interval = 45;
-    const step = 100 / (duration / interval);
+    const intervalDuration = 45;
+    const progressPerStep = 100 / (duration / intervalDuration);
 
-    timerRef.current = window.setInterval(() => {
-      setProgress((current) => {
-        const next = Math.min(current + step, 100);
+    intervalRef.current = window.setInterval(() => {
+      setProgress((currentProgress) => {
+        const nextProgress = Math.min(
+          currentProgress + progressPerStep,
+          100,
+        );
 
-        if (next >= 100) {
-          clearTimer();
+        if (nextProgress >= 100) {
+          if (intervalRef.current !== null) {
+            window.clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
 
-          window.setTimeout(() => {
-            onComplete();
-          }, 240);
+          schedule(onComplete, 300);
         }
 
-        return next;
+        return nextProgress;
       });
-    }, interval);
+    }, intervalDuration);
   }
 
-  function startDemo(file?: File) {
-    if (file) {
-      const lowerName = file.name.toLowerCase();
+  function startAnimationCycle() {
+    animateProgress("uploading", 1700, () => {
+      animateProgress("scanning", 3000, () => {
+        if (!mountedRef.current) return;
 
-      const isAllowedFile = [".pdf", ".docx", ".txt"].some(
-        (extension) => lowerName.endsWith(extension),
-      );
-
-      if (!isAllowedFile) {
-        alert("Please choose a PDF, DOCX, or TXT resume.");
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Maximum file size is 5 MB.");
-        return;
-      }
-
-      setFileName(file.name);
-
-      setFileSize(
-        file.size < 1024 * 1024
-          ? `${Math.max(1, Math.round(file.size / 1024))} KB`
-          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      );
-    }
-
-    runStage("uploading", 1500, () => {
-      runStage("scanning", 2800, () => {
         setStage("complete");
         setProgress(100);
+
+        schedule(startAnimationCycle, 3200);
       });
     });
   }
 
-  function handleFileChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = event.target.files?.[0];
+  useEffect(() => {
+    mountedRef.current = true;
+    startAnimationCycle();
 
-    event.target.value = "";
-
-    if (file) {
-      startDemo(file);
-    }
-  }
-
-  function handleDrop(
-    event: DragEvent<HTMLDivElement>,
-  ) {
-    event.preventDefault();
-    setDragging(false);
-
-    const file = event.dataTransfer.files?.[0];
-
-    if (file) {
-      startDemo(file);
-    }
-  }
-
-  function resetDemo() {
-    clearTimer();
-    setStage("idle");
-    setProgress(0);
-  }
+    return () => {
+      mountedRef.current = false;
+      clearTimers();
+    };
+  }, []);
 
   const activeStep =
-    stage === "idle"
-      ? 0
-      : stage === "uploading"
-        ? 1
-        : stage === "scanning"
-          ? 2
-          : 3;
+    stage === "uploading" ? 1 : stage === "scanning" ? 2 : 3;
 
   return (
     <div className="hero-animation-wrap">
       <section
         className="resume-animation"
-        aria-label="Resume scan demonstration"
+        role="button"
+        tabIndex={0}
+        aria-label="Automatic ATS resume analysis demonstration. Select to get started."
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
       >
-        <div className="scan-step-header">
-          <span
-            className={activeStep >= 1 ? "active" : ""}
-          >
-            Upload
-          </span>
-
+        <div className="scan-step-header" aria-hidden="true">
+          <span className={activeStep >= 1 ? "active" : ""}>Upload</span>
           <i />
-
-          <span
-            className={activeStep >= 2 ? "active" : ""}
-          >
-            Scan
-          </span>
-
+          <span className={activeStep >= 2 ? "active" : ""}>Scan</span>
           <i />
-
-          <span
-            className={activeStep >= 3 ? "active" : ""}
-          >
-            Results
-          </span>
+          <span className={activeStep >= 3 ? "active" : ""}>Results</span>
         </div>
 
-        {stage === "idle" && (
+        <div className="scan-animation-content">
           <div
-            className={`upload-drop-zone ${
-              dragging ? "dragging" : ""
+            className={`document-animation ${
+              stage === "scanning" ? "is-scanning" : ""
             }`}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => {
-              setDragging(false);
-            }}
-            onDrop={handleDrop}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.txt"
-              hidden
-              onChange={handleFileChange}
-            />
+            <div className="document-sheet">
+              <span className="document-fold" />
 
-            <div className="upload-icon">
-              <Upload size={34} />
-            </div>
-
-            <h3>
-              Drag and drop your resume here
-            </h3>
-
-            <p>
-              PDF, DOCX, or TXT · Maximum 5 MB
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                fileInputRef.current?.click();
-              }}
-            >
-              Upload Resume
-            </button>
-
-            <button
-              type="button"
-              className="scan-secondary-button"
-              onClick={() => {
-                startDemo();
-              }}
-              style={{ marginTop: 12 }}
-            >
-              Run Demo
-              <ArrowRight size={17} />
-            </button>
-          </div>
-        )}
-
-        {stage !== "idle" && (
-          <div className="scan-animation-content">
-            <div
-              className={`document-animation ${
-                stage === "scanning"
-                  ? "is-scanning"
-                  : ""
-              }`}
-            >
-              <div className="document-sheet">
-                <span className="document-fold" />
-
-                <div className="document-lines">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                {stage === "scanning" && (
-                  <span className="scanner-line" />
-                )}
+              <div className="document-lines">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
               </div>
 
-              {stage === "complete" && (
-                <div
-                  className="result-celebration"
-                  aria-hidden="true"
-                >
-                  <span>✦</span>
-                  <span>✦</span>
-                  <span>✦</span>
+              {stage === "uploading" && (
+                <div className="demo-upload-symbol" aria-hidden="true">
+                  <Upload size={26} />
                 </div>
+              )}
+
+              {stage === "scanning" && (
+                <span className="scanner-line" />
               )}
             </div>
 
-            <div className="uploaded-file-row">
-              <div className="file-type-icon">
-                <FileSearch size={18} />
-              </div>
-
-              <div className="file-information">
-                <strong>{fileName}</strong>
-                <small>{fileSize}</small>
-              </div>
-
-              <span
-                className={`file-status ${stage}`}
-              >
-                {stage === "uploading" &&
-                  "Uploading"}
-
-                {stage === "scanning" &&
-                  "Scanning"}
-
-                {stage === "complete" &&
-                  "Analyzed"}
-              </span>
-            </div>
-
-            {(stage === "uploading" ||
-              stage === "scanning") && (
-              <div className="progress-section">
-                <div className="progress-heading">
-                  <span>
-                    {stage === "uploading"
-                      ? "Uploading resume..."
-                      : "Scanning ATS compatibility..."}
-                  </span>
-
-                  <strong>
-                    {Math.round(progress)}%
-                  </strong>
-                </div>
-
-                <div className="progress-track">
-                  <span
-                    style={{
-                      width: `${progress}%`,
-                    }}
-                  />
-                </div>
-
-                <p>
-                  {stage === "uploading"
-                    ? "Preparing your resume for analysis."
-                    : "Checking keywords, skills, formatting, and experience."}
-                </p>
-              </div>
-            )}
-
             {stage === "complete" && (
-              <div className="scan-result-panel">
-                <div
-                  className="ats-score-ring"
-                  style={
-                    {
-                      "--score": `${
-                        DEMO_RESULT.overall * 3.6
-                      }deg`,
-                    } as CSSProperties
-                  }
-                >
-                  <div>
-                    <strong>
-                      {DEMO_RESULT.overall}
-                    </strong>
-
-                    <small>/100</small>
-                  </div>
-                </div>
-
-                <h3>Great match!</h3>
-
-                <p>
-                  Your resume is ready for a
-                  detailed ATS report.
-                </p>
-
-                <DemoMetric
-                  label="Keyword match"
-                  value={
-                    DEMO_RESULT.keywordMatch
-                  }
-                />
-
-                <DemoMetric
-                  label="Skills match"
-                  value={
-                    DEMO_RESULT.skillsMatch
-                  }
-                />
-
-                <DemoMetric
-                  label="Formatting"
-                  value={
-                    DEMO_RESULT.formatting
-                  }
-                />
-
-                <DemoMetric
-                  label="Experience relevance"
-                  value={
-                    DEMO_RESULT.experience
-                  }
-                />
-
-                <div className="result-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      document
-                        .getElementById("login")
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                        });
-                    }}
-                  >
-                    <CheckCircle2 size={17} />
-                    Get Full Report
-                  </button>
-
-                  <button
-                    type="button"
-                    className="scan-secondary-button"
-                    onClick={resetDemo}
-                  >
-                    Scan Another
-                  </button>
-                </div>
+              <div className="result-celebration" aria-hidden="true">
+                <span>✦</span>
+                <span>✦</span>
+                <span>✦</span>
               </div>
             )}
           </div>
-        )}
+
+          <div className="uploaded-file-row">
+            <div className="file-type-icon">
+              <FileSearch size={18} />
+            </div>
+
+            <div className="file-information">
+              <strong>{DEMO_FILE_NAME}</strong>
+              <small>{DEMO_FILE_SIZE}</small>
+            </div>
+
+            <span className={`file-status ${stage}`}>
+              {stage === "uploading" && "Uploading"}
+              {stage === "scanning" && "Scanning"}
+              {stage === "complete" && "Analyzed"}
+            </span>
+          </div>
+
+          {(stage === "uploading" || stage === "scanning") && (
+            <div className="progress-section">
+              <div className="progress-heading">
+                <span>
+                  {stage === "uploading"
+                    ? "Uploading resume..."
+                    : "Scanning ATS compatibility..."}
+                </span>
+
+                <strong>{Math.round(progress)}%</strong>
+              </div>
+
+              <div className="progress-track">
+                <span style={{ width: `${progress}%` }} />
+              </div>
+
+              <p>
+                {stage === "uploading"
+                  ? "Preparing the document for analysis."
+                  : "Checking keywords, skills, formatting, and experience."}
+              </p>
+            </div>
+          )}
+
+          {stage === "complete" && (
+            <div className="scan-result-panel">
+              <div
+                className="ats-score-ring"
+                style={
+                  {
+                    "--score": `${DEMO_RESULT.overall * 3.6}deg`,
+                  } as CSSProperties
+                }
+              >
+                <div>
+                  <strong>{DEMO_RESULT.overall}</strong>
+                  <small>/100</small>
+                </div>
+              </div>
+
+              <h3>Great match!</h3>
+              <p>Example ATS analysis completed successfully.</p>
+
+              <DemoMetric label="Keyword match" value={DEMO_RESULT.keywordMatch} />
+              <DemoMetric label="Skills match" value={DEMO_RESULT.skillsMatch} />
+              <DemoMetric label="Formatting" value={DEMO_RESULT.formatting} />
+              <DemoMetric
+                label="Experience relevance"
+                value={DEMO_RESULT.experience}
+              />
+
+              <div className="demo-click-hint">
+                <CheckCircle2 size={16} />
+                Click this animation to start your own scan
+              </div>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
@@ -434,11 +280,7 @@ function DemoMetric({
       </div>
 
       <div className="score-bar-track">
-        <span
-          style={{
-            width: `${value}%`,
-          }}
-        />
+        <span style={{ width: `${value}%` }} />
       </div>
     </div>
   );
