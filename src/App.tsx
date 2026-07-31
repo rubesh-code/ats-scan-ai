@@ -21,6 +21,8 @@ import {
   Wallet,
 } from "lucide-react";
 
+import LandingScanAnimation from "./LandingScanAnimation";
+
 const TOKEN_KEY = "ats_token";
 
 declare global {
@@ -884,85 +886,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="hero-preview">
-              <div className="preview-sidebar">
-                <Sparkles size={28} />
-                <span className="active">Overview</span>
-                <span>History</span>
-                <span>Reports</span>
-                <span>Settings</span>
-              </div>
-
-              <div className="preview-main">
-                <div>
-                  <h3>Resume Analysis</h3>
-                  <p>Upload your resume and get an ATS score in seconds.</p>
-                </div>
-
-                <div className="preview-upload">
-                  <Upload size={36} />
-                  <strong>Drag & drop your resume here</strong>
-                  <span>PDF or DOCX, max 5MB</span>
-                  <button type="button">Upload Resume</button>
-                </div>
-
-                <div className="recent-upload">
-                  <FileSearch size={22} />
-                  <div>
-                    <strong>Software_Engineer_Resume.pdf</strong>
-                    <span>245 KB</span>
-                  </div>
-                  <small>Analyzed</small>
-                </div>
-              </div>
-
-              <div className="preview-score">
-                <span>ATS Score</span>
-                <div className="preview-ring">
-                  <strong>87</strong>
-                  <small>/100</small>
-                </div>
-
-                <h4>Great Match!</h4>
-                <p>Your resume is well-optimized for ATS systems.</p>
-
-                <div className="score-metric">
-                  <span>
-                    Keyword Match <b>92%</b>
-                  </span>
-                  <div>
-                    <i style={{ width: "92%" }} />
-                  </div>
-                </div>
-
-                <div className="score-metric">
-                  <span>
-                    Skills Match <b>84%</b>
-                  </span>
-                  <div>
-                    <i style={{ width: "84%" }} />
-                  </div>
-                </div>
-
-                <div className="score-metric">
-                  <span>
-                    Formatting <b>78%</b>
-                  </span>
-                  <div>
-                    <i style={{ width: "78%" }} />
-                  </div>
-                </div>
-
-                <div className="score-metric">
-                  <span>
-                    Experience Relevance <b>90%</b>
-                  </span>
-                  <div>
-                    <i style={{ width: "90%" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LandingScanAnimation />
           </section>
 
           <section className="feature-strip" id="features">

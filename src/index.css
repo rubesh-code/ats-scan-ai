@@ -1403,3 +1403,834 @@ button:focus-visible {
     0 0 0 4px rgba(37, 99, 235, 0.22),
     0 18px 36px rgba(37, 99, 235, 0.3);
 }
+
+
+/* =========================================================
+   ATS Scan AI — Upload → Scan → Results Animation
+   Add <ResumeScanAnimation /> inside the landing-page hero.
+   These styles are scoped to .resume-animation to avoid
+   changing the existing dashboard and upload components.
+   ========================================================= */
+
+.hero-animation-wrap {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.resume-animation {
+  width: 100%;
+  max-width: 700px;
+  min-height: 500px;
+  padding: 26px;
+  overflow: hidden;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.32), transparent 42%),
+    radial-gradient(circle at 10% 85%, rgba(14, 165, 233, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(5, 15, 36, 0.98), rgba(7, 22, 49, 0.98));
+  border: 1px solid rgba(96, 165, 250, 0.48);
+  border-radius: 24px;
+  box-shadow:
+    0 30px 90px rgba(37, 99, 235, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.resume-animation .scan-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+.resume-animation .scan-step-header span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  transition:
+    color 0.3s ease,
+    text-shadow 0.3s ease;
+}
+
+.resume-animation .scan-step-header span.active {
+  color: #38bdf8;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.75);
+}
+
+.resume-animation .scan-step-header i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  background: #334155;
+  border-radius: 50%;
+}
+
+.resume-animation .upload-drop-zone {
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 34px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.13), transparent 42%),
+    rgba(8, 24, 54, 0.66);
+  border: 1px dashed rgba(96, 165, 250, 0.58);
+  border-radius: 20px;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.resume-animation .upload-drop-zone.dragging {
+  transform: scale(1.012);
+  background: rgba(37, 99, 235, 0.15);
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.08);
+}
+
+.resume-animation .upload-icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  margin: 0 0 20px;
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 18px;
+  animation: atsUploadIconFloat 2.2s ease-in-out infinite;
+}
+
+.resume-animation .upload-icon svg {
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.resume-animation .upload-drop-zone h3 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+.resume-animation .upload-drop-zone p {
+  margin: 0 0 25px;
+  color: #9db2d6;
+  font-size: 14px;
+}
+
+.resume-animation .scan-primary-button,
+.resume-animation .scan-secondary-button {
+  min-height: 46px;
+  padding: 0 22px;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  border-radius: 11px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.resume-animation .scan-primary-button {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.34);
+}
+
+.resume-animation .scan-secondary-button {
+  background: rgba(15, 23, 42, 0.76);
+  border: 1px solid #334155;
+  box-shadow: none;
+}
+
+.resume-animation .scan-primary-button:hover,
+.resume-animation .scan-secondary-button:hover {
+  transform: translateY(-2px);
+}
+
+.resume-animation .scan-primary-button:hover {
+  box-shadow: 0 16px 38px rgba(37, 99, 235, 0.46);
+}
+
+.resume-animation .scan-animation-content {
+  animation: atsScanContentEnter 0.45s ease both;
+}
+
+.resume-animation .document-animation {
+  position: relative;
+  min-height: 208px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+
+.resume-animation .document-sheet {
+  position: relative;
+  z-index: 2;
+  width: 132px;
+  height: 174px;
+  overflow: hidden;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 64, 110, 0.9),
+    rgba(17, 40, 76, 0.98)
+  );
+  border: 1px solid rgba(96, 165, 250, 0.52);
+  border-radius: 12px 25px 12px 12px;
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.34),
+    0 0 45px rgba(37, 99, 235, 0.2);
+  animation: atsDocumentFloat 2.4s ease-in-out infinite;
+}
+
+.resume-animation .document-fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  background: rgba(96, 165, 250, 0.24);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.resume-animation .document-lines {
+  display: grid;
+  gap: 14px;
+  padding: 50px 22px;
+}
+
+.resume-animation .document-lines span {
+  height: 7px;
+  background: linear-gradient(90deg, #60a5fa, rgba(96, 165, 250, 0.13));
+  border-radius: 10px;
+}
+
+.resume-animation .document-lines span:nth-child(2) {
+  width: 70%;
+}
+
+.resume-animation .document-lines span:nth-child(3) {
+  width: 90%;
+}
+
+.resume-animation .document-lines span:nth-child(4) {
+  width: 58%;
+}
+
+.resume-animation .document-lines span:nth-child(5) {
+  width: 80%;
+}
+
+.resume-animation .scanner-line {
+  position: absolute;
+  right: -20px;
+  left: -20px;
+  top: 0;
+  height: 3px;
+  background: #34d399;
+  border-radius: 10px;
+  box-shadow:
+    0 0 8px #34d399,
+    0 0 22px #34d399,
+    0 0 46px rgba(52, 211, 153, 0.95);
+  animation: atsScanDocument 1.45s ease-in-out infinite;
+}
+
+.resume-animation .document-animation.is-scanning::before,
+.resume-animation .document-animation.is-scanning::after {
+  position: absolute;
+  z-index: 1;
+  width: 175px;
+  height: 78px;
+  content: "";
+  opacity: 0.72;
+  background:
+    radial-gradient(circle, #38bdf8 1px, transparent 2px) 0 0 / 13px 13px;
+  filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.72));
+  animation: atsDataFlow 1.8s linear infinite;
+}
+
+.resume-animation .document-animation.is-scanning::before {
+  left: 10px;
+}
+
+.resume-animation .document-animation.is-scanning::after {
+  right: 10px;
+  animation-direction: reverse;
+}
+
+.resume-animation .uploaded-file-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px;
+  margin-bottom: 18px;
+  background: rgba(15, 35, 69, 0.76);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 13px;
+}
+
+.resume-animation .file-type-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #ffffff;
+  background: #ef4444;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.resume-animation .file-information {
+  min-width: 0;
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+
+.resume-animation .file-information strong {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-animation .file-information small {
+  color: #94a3b8;
+}
+
+.resume-animation .file-status {
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 9px;
+}
+
+.resume-animation .file-status.uploading {
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.16);
+}
+
+.resume-animation .file-status.scanning,
+.resume-animation .file-status.complete {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.resume-animation .progress-section {
+  padding: 20px;
+  background: rgba(8, 24, 54, 0.66);
+  border: 1px solid rgba(96, 165, 250, 0.17);
+  border-radius: 16px;
+}
+
+.resume-animation .progress-heading,
+.resume-animation .score-bar > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resume-animation .progress-heading {
+  margin-bottom: 11px;
+}
+
+.resume-animation .progress-heading span {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.resume-animation .progress-heading strong {
+  color: #34d399;
+  font-size: 22px;
+}
+
+.resume-animation .progress-track,
+.resume-animation .score-bar-track {
+  overflow: hidden;
+  background: rgba(71, 85, 105, 0.5);
+  border-radius: 20px;
+}
+
+.resume-animation .progress-track {
+  height: 9px;
+}
+
+.resume-animation .progress-track span,
+.resume-animation .score-bar-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #22d3ee, #34d399);
+  border-radius: inherit;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.38);
+  transition: width 0.1s linear;
+}
+
+.resume-animation .progress-section p {
+  margin: 12px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+}
+
+.resume-animation .scan-result-panel {
+  text-align: center;
+  animation: atsResultReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.resume-animation .ats-score-ring {
+  --score: 0deg;
+  width: 145px;
+  height: 145px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 17px;
+  background: conic-gradient(
+    #34d399 0deg,
+    #22d3ee var(--score),
+    rgba(51, 65, 85, 0.65) var(--score),
+    rgba(51, 65, 85, 0.65) 360deg
+  );
+  border-radius: 50%;
+  box-shadow:
+    0 0 45px rgba(52, 211, 153, 0.24),
+    inset 0 0 25px rgba(255, 255, 255, 0.05);
+  animation: atsRingReveal 0.9s ease both;
+}
+
+.resume-animation .ats-score-ring > div {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-content: center;
+  background: #08162f;
+  border-radius: 50%;
+}
+
+.resume-animation .ats-score-ring strong {
+  display: block;
+  color: #ffffff;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.resume-animation .ats-score-ring small {
+  color: #94a3b8;
+}
+
+.resume-animation .scan-result-panel h3 {
+  margin: 0;
+  color: #34d399;
+  font-size: 22px;
+}
+
+.resume-animation .scan-result-panel > p {
+  margin: 7px 0 20px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.resume-animation .score-bar {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.resume-animation .score-bar > div:first-child {
+  margin-bottom: 7px;
+}
+
+.resume-animation .score-bar span,
+.resume-animation .score-bar strong {
+  color: #dbeafe;
+  font-size: 12px;
+}
+
+.resume-animation .score-bar-track {
+  height: 7px;
+}
+
+.resume-animation .result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 23px;
+}
+
+.resume-animation .result-celebration span {
+  position: absolute;
+  z-index: 3;
+  color: #38bdf8;
+  font-size: 20px;
+  animation: atsCelebration 1.2s ease-in-out infinite;
+}
+
+.resume-animation .result-celebration span:nth-child(1) {
+  top: 30px;
+  left: 29%;
+}
+
+.resume-animation .result-celebration span:nth-child(2) {
+  top: 70px;
+  right: 26%;
+  color: #34d399;
+  animation-delay: 0.3s;
+}
+
+.resume-animation .result-celebration span:nth-child(3) {
+  right: 34%;
+  bottom: 30px;
+  color: #a78bfa;
+  animation-delay: 0.6s;
+}
+
+@keyframes atsUploadIconFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes atsScanContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes atsDocumentFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+
+@keyframes atsScanDocument {
+  0% {
+    top: 8%;
+  }
+
+  50% {
+    top: 88%;
+  }
+
+  100% {
+    top: 8%;
+  }
+}
+
+@keyframes atsDataFlow {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 52px 0;
+  }
+}
+
+@keyframes atsResultReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes atsRingReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.65) rotate(-90deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes atsCelebration {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(0) scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(-9px) scale(1.2);
+  }
+}
+
+/* Responsive placement for the animated hero */
+@media (max-width: 1180px) {
+  .hero-animation-wrap {
+    width: min(100%, 760px);
+    margin: 0 auto;
+  }
+
+  .resume-animation {
+    max-width: 760px;
+  }
+}
+
+@media (max-width: 760px) {
+  .resume-animation {
+    min-height: auto;
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .resume-animation .scan-step-header {
+    gap: 8px;
+  }
+
+  .resume-animation .scan-step-header span {
+    font-size: 10px;
+    letter-spacing: 0.07em;
+  }
+
+  .resume-animation .upload-drop-zone {
+    min-height: 340px;
+    padding: 24px 16px;
+  }
+
+  .resume-animation .upload-drop-zone h3 {
+    font-size: 18px;
+  }
+
+  .resume-animation .document-animation.is-scanning::before,
+  .resume-animation .document-animation.is-scanning::after {
+    width: 72px;
+  }
+
+  .resume-animation .uploaded-file-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .resume-animation .file-information {
+    max-width: calc(100% - 58px);
+  }
+
+  .resume-animation .file-status {
+    margin-left: 55px;
+  }
+
+  .resume-animation .result-actions {
+    flex-direction: column;
+  }
+
+  .resume-animation .scan-primary-button,
+  .resume-animation .scan-secondary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .resume-animation {
+    padding: 14px;
+  }
+
+  .resume-animation .scan-step-header {
+    margin-bottom: 17px;
+  }
+
+  .resume-animation .scan-step-header span {
+    font-size: 9px;
+  }
+
+  .resume-animation .document-animation {
+    min-height: 190px;
+  }
+
+  .resume-animation .document-sheet {
+    width: 116px;
+    height: 156px;
+  }
+
+  .resume-animation .ats-score-ring {
+    width: 132px;
+    height: 132px;
+  }
+
+  .resume-animation .ats-score-ring > div {
+    width: 101px;
+    height: 101px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-animation *,
+  .resume-animation *::before,
+  .resume-animation *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =========================================================
+   FIX: Hero trust-points alignment and bottom spacing
+   ========================================================= */
+
+.marketing-hero {
+  min-height: 590px;
+  align-items: center;
+  padding-top: 46px;
+  padding-bottom: 64px;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.hero-copy h1 {
+  margin: 24px 0 20px;
+}
+
+.hero-copy > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.trust-points {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  margin: 24px 0 0;
+  padding: 0 0 4px;
+  color: #dbeafe;
+}
+
+.trust-points span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.trust-points svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #34d399;
+}
+
+.feature-strip {
+  position: relative;
+  z-index: 5;
+  margin-top: 0;
+}
+
+@media (max-width: 1180px) {
+  .marketing-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 42px;
+    padding-top: 46px;
+    padding-bottom: 58px;
+  }
+
+  .hero-copy {
+    width: 100%;
+  }
+
+  .trust-points {
+    justify-content: flex-start;
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  .marketing-hero {
+    gap: 32px;
+    padding-top: 28px;
+    padding-bottom: 46px;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .hero-actions button {
+    width: 100%;
+  }
+
+  .trust-points {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 12px;
+    margin-top: 22px;
+    padding-bottom: 0;
+  }
+
+  .trust-points span {
+    white-space: normal;
+  }
+}
