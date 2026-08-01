@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -722,7 +722,11 @@ async function startServer() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(
     cors({
-      origin: process.env.CLIENT_ORIGIN?.split(",") || true,
+      origin:
+        (process.env.CORS_ORIGIN || process.env.CLIENT_ORIGIN)
+          ?.split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean) || true,
       credentials: true,
     })
   );
@@ -1465,6 +1469,39 @@ Description: ${role.description || ""}`;
         error: getErrorMessage(error),
       });
     }
+  });
+
+  const publicSiteUrl = (process.env.APP_URL || "https://atsscanai.com").replace(
+    /\/+$/,
+    ""
+  );
+
+  app.get("/robots.txt", (_req, res) => {
+    res
+      .status(200)
+      .type("text/plain")
+      .set("Cache-Control", "public, max-age=3600")
+      .send(`User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: ${publicSiteUrl}/sitemap.xml
+`);
+  });
+
+  app.get("/sitemap.xml", (_req, res) => {
+    res
+      .status(200)
+      .type("application/xml")
+      .set("Cache-Control", "public, max-age=3600")
+      .send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${publicSiteUrl}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`);
   });
 
   if (process.env.NODE_ENV !== "production") {
