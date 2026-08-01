@@ -562,7 +562,7 @@ export default function App() {
       setOtp("");
       setOtpSent(true);
       setResendSeconds(30);
-      setAuthMessage("OTP sent. Check your email. If you don’t see it, check your spam or junk folder.");
+      setAuthMessage("OTP sent. Check your email.");
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Could not send OTP.");
     } finally {
