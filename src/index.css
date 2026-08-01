@@ -6415,3 +6415,42 @@ input:not(.premium-input-label input):focus-visible {
   }
 }
 
+/* =========================================================
+   Dashboard top-menu layering fix
+   Keeps notification/profile menus above statistic cards
+   ========================================================= */
+
+.modern-topbar {
+  position: relative;
+  z-index: 60;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.modern-topbar-actions {
+  position: relative;
+  z-index: 70;
+}
+
+.modern-action-menu {
+  position: relative;
+  z-index: 71;
+}
+
+.modern-dropdown {
+  z-index: 9999;
+}
+
+.modern-stat-grid,
+.modern-workspace-grid,
+.report-panel {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 430px) {
+  .modern-dropdown {
+    z-index: 9999;
+  }
+}
+

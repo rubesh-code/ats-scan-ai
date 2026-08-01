@@ -1207,13 +1207,6 @@ export default function App() {
           <a href="#credits" onClick={() => setMobileSidebarOpen(false)}><Crown size={19} />Pricing</a>
         </nav>
 
-        <div className="modern-sidebar-section-label">Account</div>
-
-        <nav className="sidebar-nav modern-sidebar-nav modern-account-nav">
-          <a href="#dashboard"><Users size={19} />Profile</a>
-          <a href="#dashboard"><Target size={19} />Settings</a>
-        </nav>
-
         <div className="modern-credit-card" id="credits">
           <div className="modern-credit-card-top">
             <div>
