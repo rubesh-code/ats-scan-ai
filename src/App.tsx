@@ -1017,7 +1017,7 @@ export default function App() {
                 <div className="premium-price-box">
                   <div className="premium-price-value">
                     <span>{starterPackage?.credits ?? 10} Credits</span>
-                    <strong>₹{starterPackage?.price_inr ?? 29}</strong>
+                    <strong>₹{starterPackage?.price_inr ?? 99}</strong>
                   </div>
 
                   <ul>
