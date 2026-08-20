@@ -6,7 +6,7 @@ This is a production-oriented MVP for an ATS scoring and resume analyzer SaaS.
 
 - Email OTP login with JWT session
 - Razorpay credit purchase flow
-- Rs. 29 = 10 credits
+- Rs. 99 = 10 credits
 - 1 resume analysis = 1 credit
 - PDF/DOCX/TXT resume upload
 - Supabase Storage resume saving
