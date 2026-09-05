@@ -516,6 +516,8 @@ type ReportProps = {
   resumeError: string | null;
   resumeNotes: string[];
   canGenerateResume: boolean;
+  availableCredits: number;
+  generatedCount: number;
 };
 
 function Report({
@@ -529,8 +531,11 @@ function Report({
   resumeError,
   resumeNotes,
   canGenerateResume,
+  availableCredits,
+  generatedCount,
 }: ReportProps) {
   const selectedCount = selectedSuggestions.length;
+  const outOfCredits = availableCredits <= 0;
 
   return (
     <section className="report-panel" id="reports">
@@ -543,14 +548,23 @@ function Report({
         <button
           type="button"
           onClick={onGenerateResume}
-          disabled={resumeLoading || !canGenerateResume}
+          disabled={resumeLoading || !canGenerateResume || outOfCredits}
+          title={
+            outOfCredits
+              ? "You need at least 1 credit to build an improved resume."
+              : undefined
+          }
         >
           <FileDown size={18} />
-          {resumeLoading ? "Building resume..." : "Download improved resume"}
+          {resumeLoading
+            ? "Building resume..."
+            : generatedCount > 0
+              ? "Rebuild resume · 1 credit"
+              : "Download improved resume · 1 credit"}
         </button>
       </div>
 
-      <div className="rewrite-bar">
+      <div className={`rewrite-bar ${outOfCredits ? "is-blocked" : ""}`}>
         <div className="rewrite-bar-copy">
           <strong>
             {selectedCount > 0
@@ -560,15 +574,22 @@ function Report({
 
           <span>
             Add any suggestion below, then download a rewritten, ATS-ready copy of
-            your resume. Uses 1 credit.
+            your resume. Each resume costs 1 credit on top of the scan, and every
+            rebuild costs 1 more.
           </span>
         </div>
 
-        {selectedCount > 0 && (
-          <button type="button" className="text-button" onClick={onClearSuggestions}>
-            Clear selection
-          </button>
-        )}
+        <div className="rewrite-bar-side">
+          <span className="rewrite-credit-pill">
+            {availableCredits} {availableCredits === 1 ? "credit" : "credits"} left
+          </span>
+
+          {selectedCount > 0 && (
+            <button type="button" className="text-button" onClick={onClearSuggestions}>
+              Clear selection
+            </button>
+          )}
+        </div>
       </div>
 
       {resumeMessage && <p className="success-text">{resumeMessage}</p>}
@@ -701,6 +722,7 @@ export default function App() {
   const [resumeMessage, setResumeMessage] = useState<string | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [resumeNotes, setResumeNotes] = useState<string[]>([]);
+  const [resumeGeneratedCount, setResumeGeneratedCount] = useState(0);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -1074,6 +1096,20 @@ export default function App() {
       return;
     }
 
+    if ((user?.credits ?? 0) <= 0) {
+      setResumeError("Insufficient credits. Buy credits to build an improved resume.");
+      return;
+    }
+
+    // A rebuild spends another credit, so make the second one deliberate.
+    if (resumeGeneratedCount > 0) {
+      const confirmed = window.confirm(
+        "Rebuilding uses 1 more credit. Generate the resume again?"
+      );
+
+      if (!confirmed) return;
+    }
+
     // Opened up front: browsers block popups opened after an await.
     const printWindow = openPendingPrintWindow();
 
@@ -1106,6 +1142,7 @@ export default function App() {
       printDocumentInWindow(printWindow, buildResumeDocumentHtml(data.resume));
 
       setResumeNotes(data.resume?.todo_notes || []);
+      setResumeGeneratedCount((count) => count + 1);
       setResumeMessage(
         `Improved resume ready. 1 credit used. Remaining credits: ${data.remaining_credits}`
       );
@@ -1883,6 +1920,8 @@ export default function App() {
             resumeError={resumeError}
             resumeNotes={resumeNotes}
             canGenerateResume={Boolean(activeScanId)}
+            availableCredits={user?.credits ?? 0}
+            generatedCount={resumeGeneratedCount}
           />
         )}
 
