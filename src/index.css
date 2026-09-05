@@ -2608,6 +2608,97 @@ textarea {
   margin-top: 4px;
 }
 
+/* Suggestion picker feeding the resume rewrite */
+
+.rewrite-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.rewrite-bar-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rewrite-bar-copy strong {
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--accent-hover);
+}
+
+.rewrite-bar-copy span {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.selectable-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 18px;
+}
+
+.selectable-list li > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-toggle {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 540;
+  gap: 5px;
+}
+
+.suggestion-toggle:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-hover);
+}
+
+.suggestion-toggle.is-added {
+  background: var(--green-soft);
+  border-color: #cbe9dc;
+  color: var(--green);
+}
+
+.suggestion-toggle.is-added:hover:not(:disabled) {
+  background: var(--green-soft);
+  border-color: #a9dbc5;
+  color: var(--green);
+}
+
+.rewrite-notes {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--r-md);
+  background: var(--amber-soft);
+}
+
+.rewrite-notes h3 {
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 10px;
+}
+
 .history-box {
   padding: 22px;
   border: 1px solid var(--line);

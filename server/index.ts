@@ -487,6 +487,143 @@ ${resumeText.slice(0, 60000)}
 `;
 }
 
+function limitList(value: unknown, maxItems: number, maxLength = 400) {
+  return normalizeStringArray(value)
+    .map((item) => limitText(item, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function limitLine(value: unknown, maxLength = 160) {
+  return limitText(value, maxLength);
+}
+
+function normalizeRewrittenResume(raw: any) {
+  const experience = Array.isArray(raw?.experience) ? raw.experience : [];
+  const projects = Array.isArray(raw?.projects) ? raw.projects : [];
+  const education = Array.isArray(raw?.education) ? raw.education : [];
+  const skillGroups = Array.isArray(raw?.skill_groups) ? raw.skill_groups : [];
+
+  return {
+    full_name: limitLine(raw?.full_name, 90),
+    headline: limitLine(raw?.headline, 110),
+    location: limitLine(raw?.location, 90),
+    email: limitLine(raw?.email, 120),
+    phone: limitLine(raw?.phone, 40),
+    links: limitList(raw?.links, 5, 160),
+    summary: limitText(raw?.summary, 900),
+    skill_groups: skillGroups.slice(0, 6).map((group: any) => ({
+      label: limitLine(group?.label, 60),
+      items: limitList(group?.items, 24, 60),
+    })),
+    experience: experience.slice(0, 8).map((role: any) => ({
+      role: limitLine(role?.role, 110),
+      company: limitLine(role?.company, 110),
+      location: limitLine(role?.location, 80),
+      period: limitLine(role?.period, 60),
+      bullets: limitList(role?.bullets, 6, 320),
+    })),
+    projects: projects.slice(0, 6).map((project: any) => ({
+      name: limitLine(project?.name, 110),
+      period: limitLine(project?.period, 60),
+      bullets: limitList(project?.bullets, 4, 320),
+    })),
+    education: education.slice(0, 5).map((entry: any) => ({
+      degree: limitLine(entry?.degree, 120),
+      institution: limitLine(entry?.institution, 120),
+      location: limitLine(entry?.location, 80),
+      period: limitLine(entry?.period, 60),
+    })),
+    certifications: limitList(raw?.certifications, 10, 160),
+    achievements: limitList(raw?.achievements, 8, 240),
+    todo_notes: limitList(raw?.todo_notes, 8, 220),
+  };
+}
+
+function buildResumeRewritePrompt(params: {
+  resumeText: string;
+  jobDescriptionOrRole: string;
+  analysis: any;
+  selectedSuggestions: string[];
+}) {
+  const { resumeText, jobDescriptionOrRole, analysis } = params;
+
+  const gaps = {
+    missing_skills: normalizeStringArray(analysis?.missing_skills).slice(0, 20),
+    missing_keywords: normalizeStringArray(analysis?.missing_keywords).slice(0, 20),
+    formatting_issues: normalizeStringArray(analysis?.formatting_issues).slice(0, 12),
+    improvement_suggestions: normalizeStringArray(
+      analysis?.improvement_suggestions
+    ).slice(0, 12),
+  };
+
+  return `
+You are an expert resume writer who rewrites resumes so they parse cleanly in
+applicant tracking systems.
+
+Rewrite the CURRENT resume below into a structured, ATS-friendly resume aimed at
+the target role.
+
+Absolute rules:
+- Use ONLY facts that appear in the original resume.
+- Never invent or alter employers, job titles, dates, degrees, certifications,
+  locations, or numbers. If the original has no metric, do not create one.
+- You may reorder, regroup, retitle sections, tighten wording, and use stronger
+  action verbs.
+- Add a keyword from the target role ONLY when the original resume already shows
+  that experience. Otherwise put it in todo_notes for the candidate to consider.
+- If a field is not present in the original, return an empty string or empty array.
+- Plain text only. No markdown, no bullet characters, no emojis, no backticks.
+- Write bullets as complete achievement statements, at most 6 per role.
+- Return ONLY valid JSON. No explanation outside the JSON.
+
+Required JSON shape:
+{
+  "full_name": string,
+  "headline": string,
+  "location": string,
+  "email": string,
+  "phone": string,
+  "links": string[],
+  "summary": string,
+  "skill_groups": [{ "label": string, "items": string[] }],
+  "experience": [{ "role": string, "company": string, "location": string, "period": string, "bullets": string[] }],
+  "projects": [{ "name": string, "period": string, "bullets": string[] }],
+  "education": [{ "degree": string, "institution": string, "location": string, "period": string }],
+  "certifications": string[],
+  "achievements": string[],
+  "todo_notes": string[]
+}
+
+Notes on specific fields:
+- headline: the target job title, matching the posting wording, only if the
+  candidate's experience supports it.
+- summary: 2 to 4 sentences, written in third person without pronouns.
+- skill_groups: group related skills, for example Languages, Frameworks, Tools.
+- todo_notes: short instructions to the candidate about what only they can add,
+  such as a missing metric or a genuinely missing skill.
+
+Target job description or job type:
+${jobDescriptionOrRole.slice(0, 12000)}
+
+Gaps found in the previous ATS analysis:
+${JSON.stringify(gaps, null, 2)}
+
+${
+  params.selectedSuggestions.length > 0
+    ? `The candidate explicitly asked you to apply these suggestions. Work each one
+into the rewrite wherever their existing experience supports it. If one cannot be
+applied truthfully, leave it out of the resume and explain why in todo_notes:
+${JSON.stringify(params.selectedSuggestions, null, 2)}`
+    : `The candidate did not pick specific suggestions. Apply your own judgement,
+staying inside the rules above.`
+}
+
+Current resume:
+${resumeText.slice(0, 60000)}
+`;
+}
+
 async function parsePdf(buffer: Buffer) {
   const result = await pdfParse(buffer);
   return result.text || "";
@@ -1424,6 +1561,163 @@ Description: ${role.description || ""}`;
       }
     }
   );
+
+  app.post("/api/resume/rewrite", authMiddleware, async (req, res) => {
+    if (!requireSupabase(res)) return;
+
+    const ai = requireGemini(res);
+    if (!ai) return;
+
+    const db = supabase! as any;
+
+    try {
+      const scanId = String(req.body.scan_id || "").trim();
+
+      const selectedSuggestions = normalizeStringArray(req.body.apply_suggestions)
+        .map((item) => limitText(item, 320))
+        .filter(Boolean)
+        .slice(0, 30);
+
+      if (!scanId) {
+        return res.status(400).json({
+          error: "scan_id is required.",
+        });
+      }
+
+      const { data: scan, error: scanError } = await db
+        .from("scans")
+        .select("id, resume_id, filename, job_description, job_role_id, result_data")
+        .eq("id", scanId)
+        .eq("user_id", req.user!.id)
+        .single();
+
+      if (scanError || !scan) {
+        return res.status(404).json({
+          error: "Scan not found.",
+        });
+      }
+
+      if (!scan.resume_id) {
+        return res.status(400).json({
+          error:
+            "The resume file for this scan is no longer available. Run a new scan to generate an improved resume.",
+        });
+      }
+
+      const { data: uploadedResume, error: resumeError } = await db
+        .from("uploaded_resumes")
+        .select("id, file_name, extracted_text")
+        .eq("id", scan.resume_id)
+        .eq("user_id", req.user!.id)
+        .maybeSingle();
+
+      if (resumeError) throw resumeError;
+
+      const resumeText = String(uploadedResume?.extracted_text || "").trim();
+
+      if (resumeText.length < 100) {
+        return res.status(400).json({
+          error:
+            "The stored text for this resume is too short to rewrite. Run a new scan and try again.",
+        });
+      }
+
+      const { data: user, error: userError } = await db
+        .from("users")
+        .select("credits")
+        .eq("id", req.user!.id)
+        .single();
+
+      if (userError || !user) {
+        return res.status(404).json({
+          error: "User not found.",
+        });
+      }
+
+      if (Number(user.credits || 0) <= 0) {
+        return res.status(400).json({
+          error: "Insufficient credits.",
+        });
+      }
+
+      let targetText = String(scan.job_description || "").trim();
+
+      if (scan.job_role_id) {
+        const { data: role } = await db
+          .from("job_roles")
+          .select("role_name, required_skills, keywords, description")
+          .eq("id", scan.job_role_id)
+          .maybeSingle();
+
+        if (role) {
+          targetText = `${targetText}
+
+Selected job type: ${role.role_name}
+Required skills: ${(role.required_skills || []).join(", ")}
+Keywords: ${(role.keywords || []).join(", ")}
+Description: ${role.description || ""}`.trim();
+        }
+      }
+
+      const prompt = buildResumeRewritePrompt({
+        resumeText,
+        jobDescriptionOrRole: targetText,
+        analysis: scan.result_data || {},
+        selectedSuggestions,
+      });
+
+      const geminiResponse = await generateWithGeminiRetry(ai, prompt);
+      const rewritten = normalizeRewrittenResume(
+        extractJsonFromText(geminiResponse.text || "")
+      );
+
+      if (
+        rewritten.experience.length === 0 &&
+        rewritten.education.length === 0 &&
+        rewritten.skill_groups.length === 0
+      ) {
+        return res.status(502).json({
+          error: "Could not rebuild this resume. Please try again.",
+        });
+      }
+
+      // Charge only once the rewrite actually succeeded.
+      const { data: remainingCredits, error: spendError } = await db.rpc(
+        "spend_credit_for_resume_rewrite",
+        {
+          p_user_id: req.user!.id,
+          p_scan_id: scan.id,
+        }
+      );
+
+      if (spendError) {
+        const message = getErrorMessage(spendError);
+
+        if (message.includes("Insufficient credits")) {
+          return res.status(400).json({
+            error: "Insufficient credits.",
+          });
+        }
+
+        throw spendError;
+      }
+
+      return res.json({
+        status: "ok",
+        message: "Improved resume generated. 1 credit used.",
+        source_file_name: uploadedResume?.file_name || scan.filename,
+        applied_suggestions: selectedSuggestions,
+        credits_used: 1,
+        remaining_credits: remainingCredits ?? null,
+        resume: rewritten,
+      });
+    } catch (error: unknown) {
+      console.error(error);
+      return res.status(500).json({
+        error: getErrorMessage(error),
+      });
+    }
+  });
 
   app.get("/api/scans", authMiddleware, async (req, res) => {
     if (!requireSupabase(res)) return;

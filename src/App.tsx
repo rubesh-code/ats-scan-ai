@@ -5,10 +5,13 @@ import {
   BrainCircuit,
   CheckCircle2,
   CirclePlay,
+  Check,
   CloudUpload,
   CreditCard,
   Download,
+  FileDown,
   FileSearch,
+  Plus,
   Gem,
   History,
   LayoutDashboard,
@@ -161,371 +164,239 @@ function escapeHtml(value: unknown) {
     .replaceAll("'", "&#039;");
 }
 
-function pdfList(items?: string[]) {
-  if (!items || items.length === 0) {
-    return `<p class="empty">None found.</p>`;
-  }
+type RewrittenResume = {
+  full_name: string;
+  headline: string;
+  location: string;
+  email: string;
+  phone: string;
+  links: string[];
+  summary: string;
+  skill_groups: { label: string; items: string[] }[];
+  experience: {
+    role: string;
+    company: string;
+    location: string;
+    period: string;
+    bullets: string[];
+  }[];
+  projects: { name: string; period: string; bullets: string[] }[];
+  education: {
+    degree: string;
+    institution: string;
+    location: string;
+    period: string;
+  }[];
+  certifications: string[];
+  achievements: string[];
+  todo_notes: string[];
+};
+
+function joinParts(parts: (string | undefined)[], separator: string) {
+  return parts
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(separator);
+}
+
+function resumeBullets(items?: string[]) {
+  if (!items || items.length === 0) return "";
+
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function resumeSection(title: string, body: string) {
+  if (!body.trim()) return "";
 
   return `
-    <ul>
-      ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-    </ul>
-  `;
-}
-
-type ReportTone = "good" | "warn" | "bad" | "info" | "neutral";
-
-function toneForScore(score: number): ReportTone {
-  if (score >= 80) return "good";
-  if (score >= 60) return "warn";
-  return "bad";
-}
-
-/* Gaps and issues: none is good, a few is a warning, many is a problem. */
-function toneForIssues(items?: string[]): ReportTone {
-  const count = items?.length ?? 0;
-
-  if (count === 0) return "good";
-  if (count <= 3) return "warn";
-  return "bad";
-}
-
-/* Strengths read the other way: the more found, the better. */
-function toneForStrengths(items?: string[]): ReportTone {
-  const count = items?.length ?? 0;
-
-  if (count === 0) return "bad";
-  if (count <= 3) return "warn";
-  return "good";
-}
-
-/* Some lists mean one thing when they have entries and another when empty. */
-function toneForPresence(
-  items: string[] | undefined,
-  present: ReportTone,
-  empty: ReportTone
-): ReportTone {
-  return (items?.length ?? 0) > 0 ? present : empty;
-}
-
-function toneForChange(value: number | null | undefined): ReportTone {
-  if (value === null || value === undefined || value === 0) return "neutral";
-  return value > 0 ? "good" : "bad";
-}
-
-function pdfCard(title: string, body: string, tone: ReportTone = "neutral") {
-  return `
-    <section class="card tone-${tone}">
+    <section>
       <h2>${escapeHtml(title)}</h2>
       ${body}
     </section>
   `;
 }
 
-function buildPrintableReportHtml(analysis: AtsAnalysis) {
-  const history = analysis.history_comparison;
+function resumeEntry(params: {
+  primary: string;
+  secondary?: string;
+  aside?: string;
+  bullets?: string[];
+}) {
+  const { primary, secondary, aside, bullets } = params;
 
-  const score = Number(analysis.ats_score) || 0;
-  const tone = toneForScore(score);
+  if (!primary.trim() && !secondary?.trim()) return "";
 
-  const historyTone = history?.has_previous_scans
-    ? toneForChange(history.score_change_from_latest)
-    : "neutral";
-
-  const historyHtml =
-    history && history.has_previous_scans
-      ? `
-      <section class="card tone-${historyTone}">
-        <h2>History comparison</h2>
-
-        <div class="metrics">
-          <div>
-            <span>Latest previous</span>
-            <strong>${escapeHtml(history.latest_previous_score ?? "N/A")}</strong>
-          </div>
-          <div>
-            <span>Previous best</span>
-            <strong>${escapeHtml(history.previous_best_score ?? "N/A")}</strong>
-          </div>
-          <div>
-            <span>Change from latest</span>
-            <strong class="${getScoreChangeClass(history.score_change_from_latest)}">${escapeHtml(renderScoreChange(history.score_change_from_latest))}</strong>
-          </div>
-          <div>
-            <span>Change from best</span>
-            <strong class="${getScoreChangeClass(history.score_change_from_best)}">${escapeHtml(renderScoreChange(history.score_change_from_best))}</strong>
-          </div>
+  return `
+    <article class="entry">
+      <div class="entry-head">
+        <div>
+          <h3>${escapeHtml(primary)}</h3>
+          ${secondary ? `<p class="entry-sub">${escapeHtml(secondary)}</p>` : ""}
         </div>
+        ${aside ? `<p class="entry-aside">${escapeHtml(aside)}</p>` : ""}
+      </div>
+      ${resumeBullets(bullets)}
+    </article>
+  `;
+}
 
-        <h3>Progress summary</h3>
-        <p>${escapeHtml(history.progress_summary || "No progress summary available.")}</p>
+/*
+ * Single column, real headings, no tables or text boxes: the layout an ATS
+ * parser can read top to bottom without losing fields.
+ */
+function buildResumeDocumentHtml(resume: RewrittenResume) {
+  const contact = joinParts(
+    [resume.location, resume.phone, resume.email, ...resume.links],
+    "  •  "
+  );
 
-        <div class="split">
-          <div class="tone-${toneForPresence(history.improved_areas, "good", "neutral")}">
-            <h3>Improved areas</h3>
-            ${pdfList(history.improved_areas)}
-          </div>
-          <div class="tone-${toneForPresence(history.repeated_issues, "warn", "good")}">
-            <h3>Repeated issues</h3>
-            ${pdfList(history.repeated_issues)}
-          </div>
-          <div class="tone-${toneForPresence(history.new_issues, "bad", "good")}">
-            <h3>New issues</h3>
-            ${pdfList(history.new_issues)}
-          </div>
-        </div>
-      </section>
-    `
-      : `
-      <section class="card tone-neutral">
-        <h2>History comparison</h2>
-        <p class="empty">This is the first scan. Analyze again to compare improvements.</p>
-      </section>
-    `;
+  const skillsHtml = resume.skill_groups
+    .map((group) => {
+      const items = joinParts(group.items, ", ");
+      if (!items) return "";
+
+      return group.label
+        ? `<p class="skill-row"><strong>${escapeHtml(group.label)}:</strong> ${escapeHtml(items)}</p>`
+        : `<p class="skill-row">${escapeHtml(items)}</p>`;
+    })
+    .join("");
+
+  const experienceHtml = resume.experience
+    .map((role) =>
+      resumeEntry({
+        primary: role.role,
+        secondary: joinParts([role.company, role.location], " — "),
+        aside: role.period,
+        bullets: role.bullets,
+      })
+    )
+    .join("");
+
+  const projectsHtml = resume.projects
+    .map((project) =>
+      resumeEntry({
+        primary: project.name,
+        aside: project.period,
+        bullets: project.bullets,
+      })
+    )
+    .join("");
+
+  const educationHtml = resume.education
+    .map((entry) =>
+      resumeEntry({
+        primary: entry.degree,
+        secondary: joinParts([entry.institution, entry.location], " — "),
+        aside: entry.period,
+      })
+    )
+    .join("");
 
   return `
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ATS Scan AI Report</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap"
-  />
+  <title>${escapeHtml(resume.full_name || "Resume")}</title>
   <style>
-    @page { margin: 16mm 14mm; }
-
-    :root {
-      --ink: #0f1420;
-      --ink-2: #333b4a;
-      --ink-3: #626c7d;
-      --ink-4: #8b95a5;
-      --line: #e7e9ee;
-      --surface-2: #f7f8fa;
-      --accent: #2563eb;
-      --green: #0f8a5f;
-      --amber: #b45309;
-      --red: #d1332e;
-
-      --tone: #8b95a5;
-      --tone-soft: #eef1f5;
-    }
-
-    .tone-good { --tone: #0f8a5f; --tone-soft: #e8f7f0; }
-    .tone-warn { --tone: #b45309; --tone-soft: #fdf3e4; }
-    .tone-bad { --tone: #d1332e; --tone-soft: #fdeeed; }
-    .tone-info { --tone: #2563eb; --tone-soft: #eff4ff; }
-    .tone-neutral { --tone: #626c7d; --tone-soft: #f2f4f7; }
+    @page { margin: 14mm 15mm; }
 
     * { box-sizing: border-box; }
 
-    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
     body {
       margin: 0;
-      padding: 28px 30px 24px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      font-size: 12px;
-      line-height: 1.6;
-      color: var(--ink-2);
-      background: #fff;
+      font-family: Arial, Helvetica, "Segoe UI", sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #111111;
+      background: #ffffff;
     }
 
-    h1, h2, h3 { margin: 0; color: var(--ink); letter-spacing: -0.022em; font-weight: 700; }
+    h1, h2, h3 { margin: 0; color: #111111; }
     p { margin: 0; }
 
-    .masthead {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--line);
-    }
-    .brand {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.11em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 6px;
-    }
-    .masthead h1 { font-size: 23px; letter-spacing: -0.03em; }
-    .masthead .meta { font-size: 10.5px; color: var(--ink-4); text-align: right; }
+    header { margin-bottom: 14px; }
+    h1 { font-size: 21pt; letter-spacing: -0.01em; }
+    .headline { margin-top: 2px; font-size: 11pt; font-weight: bold; }
+    .contact { margin-top: 5px; font-size: 9.5pt; color: #333333; }
 
-    .score-block {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      margin: 20px 0;
-      padding: 20px 22px;
-      border: 1px solid var(--line);
-      border-left: 4px solid var(--tone);
-      border-radius: 14px;
-      background: var(--tone-soft);
-      page-break-inside: avoid;
-    }
-    .score-figure { display: flex; align-items: baseline; gap: 3px; }
-    .score-figure strong { font-size: 46px; line-height: 1; letter-spacing: -0.04em; font-weight: 700; color: var(--tone); }
-    .score-figure span { font-size: 13px; color: var(--ink-4); }
-    .score-meter { flex: 1; }
-    .score-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      font-weight: 700;
+    section { margin-top: 15px; page-break-inside: auto; }
+    h2 {
+      font-size: 10pt;
+      font-weight: bold;
       letter-spacing: 0.09em;
       text-transform: uppercase;
-      color: var(--tone);
-      margin-bottom: 7px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid #111111;
+      margin-bottom: 9px;
     }
-    .score-label .max { color: var(--ink-4); }
-    .meter { height: 7px; border-radius: 999px; background: #e4e7ec; overflow: hidden; }
-    .meter span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
-    .score-caption { margin-top: 8px; font-size: 10.5px; color: var(--ink-4); }
 
-    .card {
-      margin: 12px 0;
-      padding: 16px 18px;
-      border: 1px solid var(--line);
-      border-left: 4px solid var(--tone);
-      border-radius: 12px;
-      background: #fff;
-      page-break-inside: avoid;
+    .entry { margin-bottom: 11px; page-break-inside: avoid; }
+    .entry:last-child { margin-bottom: 0; }
+    .entry-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
     }
-    .card h2 {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
-      color: var(--tone);
-      margin-bottom: 10px;
-    }
-    .card h3 { font-size: 11.5px; font-weight: 700; color: var(--tone); margin: 14px 0 6px; }
-    .card p { font-size: 12px; color: var(--ink-2); }
+    h3 { font-size: 11pt; font-weight: bold; }
+    .entry-sub { font-size: 10pt; color: #333333; }
+    .entry-aside { font-size: 9.5pt; color: #444444; white-space: nowrap; }
 
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid .card { margin: 0; }
-    .split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .split h3 { margin-top: 12px; }
+    ul { margin: 5px 0 0; padding-left: 17px; }
+    li { margin-bottom: 3px; }
 
-    ul { margin: 0; padding: 0; list-style: none; }
-    li { position: relative; padding-left: 13px; margin-bottom: 5px; font-size: 12px; color: var(--ink-2); }
-    li::before {
-      content: "";
-      position: absolute;
-      left: 1px;
-      top: 7px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--tone);
-    }
-    .empty { font-size: 11.5px; font-weight: 560; color: var(--tone); }
-
-    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .metrics div {
-      padding: 11px 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--surface-2);
-    }
-    .metrics span {
-      display: block;
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--ink-4);
-      margin-bottom: 3px;
-    }
-    .metrics strong { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); }
-    .metrics strong.positive { color: var(--green); }
-    .metrics strong.negative { color: var(--red); }
-    .metrics strong.neutral { color: var(--ink-3); }
-
-    .footer {
-      margin-top: 20px;
-      padding-top: 12px;
-      border-top: 1px solid var(--line);
-      font-size: 10px;
-      color: var(--ink-4);
-    }
+    .skill-row { margin-bottom: 4px; }
+    .summary { text-align: justify; }
   </style>
 </head>
 <body>
-  <header class="masthead">
-    <div>
-      <div class="brand">ATS Scan AI</div>
-      <h1>Resume ATS Report</h1>
-    </div>
-
-    <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
+  <header>
+    <h1>${escapeHtml(resume.full_name || "Your Name")}</h1>
+    ${resume.headline ? `<p class="headline">${escapeHtml(resume.headline)}</p>` : ""}
+    ${contact ? `<p class="contact">${escapeHtml(contact)}</p>` : ""}
   </header>
 
-  <section class="score-block tone-${tone}">
-    <div class="score-figure">
-      <strong>${escapeHtml(score)}</strong>
-      <span>/100</span>
-    </div>
-
-    <div class="score-meter">
-      <div class="score-label">
-        <span>ATS score</span>
-        <span class="max">100</span>
-      </div>
-
-      <div class="meter"><span style="width: ${Math.max(0, Math.min(100, score))}%"></span></div>
-
-      <p class="score-caption">
-        Measured against the job description or job type used for this scan.
-      </p>
-    </div>
-  </section>
-
-  ${pdfCard("Resume summary", `<p>${escapeHtml(analysis.resume_summary)}</p>`, "info")}
-
-  ${historyHtml}
-
-  <div class="grid">
-    ${pdfCard("Matched skills", pdfList(analysis.matched_skills), toneForStrengths(analysis.matched_skills))}
-    ${pdfCard("Missing skills", pdfList(analysis.missing_skills), toneForIssues(analysis.missing_skills))}
-    ${pdfCard("Missing keywords", pdfList(analysis.missing_keywords), toneForIssues(analysis.missing_keywords))}
-    ${pdfCard("Formatting issues", pdfList(analysis.formatting_issues), toneForIssues(analysis.formatting_issues))}
-    ${pdfCard("Experience match", `<p>${escapeHtml(analysis.experience_match)}</p>`, "info")}
-    ${pdfCard("Education match", `<p>${escapeHtml(analysis.education_match)}</p>`, "info")}
-  </div>
-
-  ${pdfCard("Improvement suggestions", pdfList(analysis.improvement_suggestions), "info")}
-  ${pdfCard("Better bullet points", pdfList(analysis.better_bullet_points), "info")}
-  ${pdfCard("Final recommendation", `<p>${escapeHtml(analysis.final_recommendation)}</p>`, tone)}
-
-  <div class="footer">
-    ATS Scan AI report. Use this as guidance and review your resume manually before applying.
-  </div>
+  ${resumeSection(
+    "Professional Summary",
+    resume.summary ? `<p class="summary">${escapeHtml(resume.summary)}</p>` : ""
+  )}
+  ${resumeSection("Skills", skillsHtml)}
+  ${resumeSection("Experience", experienceHtml)}
+  ${resumeSection("Projects", projectsHtml)}
+  ${resumeSection("Education", educationHtml)}
+  ${resumeSection("Certifications", resumeBullets(resume.certifications))}
+  ${resumeSection("Achievements", resumeBullets(resume.achievements))}
 </body>
 </html>
 `;
 }
 
-function downloadReportAsPdf(analysis: AtsAnalysis) {
-  const reportWindow = window.open("", "_blank", "width=900,height=700");
+function openPendingPrintWindow() {
+  const printWindow = window.open("", "_blank", "width=900,height=700");
 
-  if (!reportWindow) {
-    alert("Popup blocked. Please allow popups to download the report.");
-    return;
-  }
+  if (!printWindow) return null;
 
-  reportWindow.document.open();
-  reportWindow.document.write(buildPrintableReportHtml(analysis));
-  reportWindow.document.close();
-  reportWindow.focus();
+  printWindow.document.open();
+  printWindow.document.write(
+    `<!doctype html><html><head><meta charset="utf-8" /><title>Preparing resume…</title></head>
+     <body style="margin:0;display:grid;place-items:center;height:100vh;font-family:Arial,sans-serif;color:#626c7d">
+       Building your improved resume…
+     </body></html>`
+  );
+  printWindow.document.close();
+
+  return printWindow;
+}
+
+function printDocumentInWindow(printWindow: Window, html: string) {
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
 
   setTimeout(() => {
-    reportWindow.print();
+    printWindow.print();
   }, 500);
 }
 
@@ -597,7 +468,70 @@ function HistoryComparison({ history }: { history?: AtsHistoryComparison }) {
   );
 }
 
-function Report({ analysis }: { analysis: AtsAnalysis }) {
+type SuggestionListProps = {
+  items?: string[];
+  selected: string[];
+  onToggle: (item: string) => void;
+};
+
+/* Each fix is a switch: picked items are handed to the resume rewriter. */
+function SuggestionList({ items, selected, onToggle }: SuggestionListProps) {
+  if (!items || items.length === 0) {
+    return <p className="muted">None found.</p>;
+  }
+
+  return (
+    <ul className="report-list selectable-list">
+      {items.map((item, index) => {
+        const isSelected = selected.includes(item);
+
+        return (
+          <li key={`${item}-${index}`}>
+            <span>{item}</span>
+
+            <button
+              type="button"
+              className={`suggestion-toggle ${isSelected ? "is-added" : ""}`}
+              aria-pressed={isSelected}
+              onClick={() => onToggle(item)}
+            >
+              {isSelected ? <Check size={14} /> : <Plus size={14} />}
+              {isSelected ? "Added" : "Add"}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+type ReportProps = {
+  analysis: AtsAnalysis;
+  selectedSuggestions: string[];
+  onToggleSuggestion: (item: string) => void;
+  onClearSuggestions: () => void;
+  onGenerateResume: () => void;
+  resumeLoading: boolean;
+  resumeMessage: string | null;
+  resumeError: string | null;
+  resumeNotes: string[];
+  canGenerateResume: boolean;
+};
+
+function Report({
+  analysis,
+  selectedSuggestions,
+  onToggleSuggestion,
+  onClearSuggestions,
+  onGenerateResume,
+  resumeLoading,
+  resumeMessage,
+  resumeError,
+  resumeNotes,
+  canGenerateResume,
+}: ReportProps) {
+  const selectedCount = selectedSuggestions.length;
+
   return (
     <section className="report-panel" id="reports">
       <div className="section-title-row">
@@ -608,12 +542,48 @@ function Report({ analysis }: { analysis: AtsAnalysis }) {
 
         <button
           type="button"
-          className="secondary-button"
-          onClick={() => downloadReportAsPdf(analysis)}
+          onClick={onGenerateResume}
+          disabled={resumeLoading || !canGenerateResume}
         >
-          <Download size={18} /> Download PDF
+          <FileDown size={18} />
+          {resumeLoading ? "Building resume..." : "Download improved resume"}
         </button>
       </div>
+
+      <div className="rewrite-bar">
+        <div className="rewrite-bar-copy">
+          <strong>
+            {selectedCount > 0
+              ? `${selectedCount} ${selectedCount === 1 ? "fix" : "fixes"} selected`
+              : "Pick the fixes to apply"}
+          </strong>
+
+          <span>
+            Add any suggestion below, then download a rewritten, ATS-ready copy of
+            your resume. Uses 1 credit.
+          </span>
+        </div>
+
+        {selectedCount > 0 && (
+          <button type="button" className="text-button" onClick={onClearSuggestions}>
+            Clear selection
+          </button>
+        )}
+      </div>
+
+      {resumeMessage && <p className="success-text">{resumeMessage}</p>}
+      {resumeError && <p className="error-text">{resumeError}</p>}
+
+      {resumeNotes.length > 0 && (
+        <div className="rewrite-notes">
+          <h3>Only you can add these</h3>
+          <ul className="report-list">
+            {resumeNotes.map((note, index) => (
+              <li key={`${note}-${index}`}>{note}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="report-hero">
         <ScoreBadge score={analysis.ats_score} />
@@ -633,17 +603,29 @@ function Report({ analysis }: { analysis: AtsAnalysis }) {
 
         <div className="report-card">
           <h3>Missing Skills</h3>
-          {renderList(analysis.missing_skills)}
+          <SuggestionList
+            items={analysis.missing_skills}
+            selected={selectedSuggestions}
+            onToggle={onToggleSuggestion}
+          />
         </div>
 
         <div className="report-card">
           <h3>Missing Keywords</h3>
-          {renderList(analysis.missing_keywords)}
+          <SuggestionList
+            items={analysis.missing_keywords}
+            selected={selectedSuggestions}
+            onToggle={onToggleSuggestion}
+          />
         </div>
 
         <div className="report-card">
           <h3>Formatting Issues</h3>
-          {renderList(analysis.formatting_issues)}
+          <SuggestionList
+            items={analysis.formatting_issues}
+            selected={selectedSuggestions}
+            onToggle={onToggleSuggestion}
+          />
         </div>
 
         <div className="report-card">
@@ -658,12 +640,20 @@ function Report({ analysis }: { analysis: AtsAnalysis }) {
 
         <div className="report-card wide">
           <h3>Improvement Suggestions</h3>
-          {renderList(analysis.improvement_suggestions)}
+          <SuggestionList
+            items={analysis.improvement_suggestions}
+            selected={selectedSuggestions}
+            onToggle={onToggleSuggestion}
+          />
         </div>
 
         <div className="report-card wide">
           <h3>Better Bullet Points</h3>
-          {renderList(analysis.better_bullet_points)}
+          <SuggestionList
+            items={analysis.better_bullet_points}
+            selected={selectedSuggestions}
+            onToggle={onToggleSuggestion}
+          />
         </div>
 
         <div className="report-card wide">
@@ -704,6 +694,13 @@ export default function App() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AtsAnalysis | null>(null);
+  const [activeScanId, setActiveScanId] = useState<string | null>(null);
+
+  const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumeNotes, setResumeNotes] = useState<string[]>([]);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -1051,6 +1048,77 @@ export default function App() {
       setAnalysisError(error instanceof Error ? error.message : "Resume analysis failed.");
     } finally {
       setAnalysisLoading(false);
+    }
+  }
+
+  function showAnalysis(nextAnalysis: AtsAnalysis | null, scanId: string | null) {
+    setAnalysis(nextAnalysis);
+    setActiveScanId(scanId);
+    setSelectedSuggestions([]);
+    setResumeMessage(null);
+    setResumeError(null);
+    setResumeNotes([]);
+  }
+
+  function handleToggleSuggestion(item: string) {
+    setSelectedSuggestions((current) =>
+      current.includes(item)
+        ? current.filter((entry) => entry !== item)
+        : [...current, item]
+    );
+  }
+
+  async function handleGenerateResume() {
+    if (!activeScanId) {
+      setResumeError("Open a scan from your history first.");
+      return;
+    }
+
+    // Opened up front: browsers block popups opened after an await.
+    const printWindow = openPendingPrintWindow();
+
+    if (!printWindow) {
+      setResumeError("Popup blocked. Allow popups for this site and try again.");
+      return;
+    }
+
+    try {
+      setResumeLoading(true);
+      setResumeError(null);
+      setResumeMessage(null);
+      setResumeNotes([]);
+
+      const response = await authFetch("/api/resume/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scan_id: activeScanId,
+          apply_suggestions: selectedSuggestions,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not build the improved resume.");
+      }
+
+      printDocumentInWindow(printWindow, buildResumeDocumentHtml(data.resume));
+
+      setResumeNotes(data.resume?.todo_notes || []);
+      setResumeMessage(
+        `Improved resume ready. 1 credit used. Remaining credits: ${data.remaining_credits}`
+      );
+
+      await refreshDashboard();
+    } catch (error) {
+      printWindow.close();
+
+      setResumeError(
+        error instanceof Error ? error.message : "Could not build the improved resume."
+      );
+    } finally {
+      setResumeLoading(false);
     }
   }
 
@@ -1789,7 +1857,7 @@ export default function App() {
                     type="button"
                     key={scan.id}
                     className="scan-row"
-                    onClick={() => scan.result_data && setAnalysis(scan.result_data)}
+                    onClick={() => scan.result_data && showAnalysis(scan.result_data, scan.id)}
                   >
                     <div className="scan-file">
                       <span>{scan.filename}</span>
@@ -1803,7 +1871,20 @@ export default function App() {
           </aside>
         </section>
 
-        {analysis && <Report analysis={analysis} />}
+        {analysis && (
+          <Report
+            analysis={analysis}
+            selectedSuggestions={selectedSuggestions}
+            onToggleSuggestion={handleToggleSuggestion}
+            onClearSuggestions={() => setSelectedSuggestions([])}
+            onGenerateResume={handleGenerateResume}
+            resumeLoading={resumeLoading}
+            resumeMessage={resumeMessage}
+            resumeError={resumeError}
+            resumeNotes={resumeNotes}
+            canGenerateResume={Boolean(activeScanId)}
+          />
+        )}
 
         <footer className="modern-dashboard-footer">
           © {new Date().getFullYear()} ATS Scan AI. All rights reserved.

@@ -239,6 +239,49 @@ begin
 end;
 $$;
 
+-- Spend one credit for an improved-resume rewrite.
+-- Decrement and log in a single statement so two parallel requests cannot
+-- both spend the last credit.
+create or replace function public.spend_credit_for_resume_rewrite(
+  p_user_id uuid,
+  p_scan_id uuid
+)
+returns integer
+language plpgsql
+security definer
+as $$
+declare
+  v_remaining integer;
+begin
+  update public.users
+  set
+    credits = credits - 1,
+    updated_at = now()
+  where id = p_user_id and credits > 0
+  returning credits into v_remaining;
+
+  if v_remaining is null then
+    raise exception 'Insufficient credits';
+  end if;
+
+  insert into public.credit_transactions (
+    user_id,
+    scan_id,
+    type,
+    credits,
+    description
+  ) values (
+    p_user_id,
+    p_scan_id,
+    'resume_rewrite',
+    -1,
+    'Improved resume generated'
+  );
+
+  return v_remaining;
+end;
+$$;
+
 -- RLS: backend service role bypasses this; these policies are for safe direct client access if used later.
 alter table public.users enable row level security;
 alter table public.otp_codes enable row level security;
