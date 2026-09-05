@@ -3,6 +3,12 @@
 
 create extension if not exists pgcrypto;
 
+-- NOTE: this file describes the original install. The production database has
+-- since drifted from it (scans.job_role, payments.cashfree_* columns, numeric
+-- scans.score, users.credits default). Treat it as a fresh-install script only.
+-- To change an existing database, add a file under supabase/migrations/ and run
+-- that instead.
+
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   name text not null default 'User',
@@ -242,6 +248,8 @@ $$;
 -- Spend one credit for an improved-resume rewrite.
 -- Decrement and log in a single statement so two parallel requests cannot
 -- both spend the last credit.
+-- Also kept standalone in supabase/migrations/001_resume_rewrite_credit.sql,
+-- which is what to run against an existing database.
 create or replace function public.spend_credit_for_resume_rewrite(
   p_user_id uuid,
   p_scan_id uuid
