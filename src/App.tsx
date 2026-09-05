@@ -173,22 +173,69 @@ function pdfList(items?: string[]) {
   `;
 }
 
-function getScoreTone(score: number) {
+type ReportTone = "good" | "warn" | "bad" | "info" | "neutral";
+
+function toneForScore(score: number): ReportTone {
   if (score >= 80) return "good";
-  if (score >= 60) return "fair";
-  return "weak";
+  if (score >= 60) return "warn";
+  return "bad";
+}
+
+/* Gaps and issues: none is good, a few is a warning, many is a problem. */
+function toneForIssues(items?: string[]): ReportTone {
+  const count = items?.length ?? 0;
+
+  if (count === 0) return "good";
+  if (count <= 3) return "warn";
+  return "bad";
+}
+
+/* Strengths read the other way: the more found, the better. */
+function toneForStrengths(items?: string[]): ReportTone {
+  const count = items?.length ?? 0;
+
+  if (count === 0) return "bad";
+  if (count <= 3) return "warn";
+  return "good";
+}
+
+/* Some lists mean one thing when they have entries and another when empty. */
+function toneForPresence(
+  items: string[] | undefined,
+  present: ReportTone,
+  empty: ReportTone
+): ReportTone {
+  return (items?.length ?? 0) > 0 ? present : empty;
+}
+
+function toneForChange(value: number | null | undefined): ReportTone {
+  if (value === null || value === undefined || value === 0) return "neutral";
+  return value > 0 ? "good" : "bad";
+}
+
+function pdfCard(title: string, body: string, tone: ReportTone = "neutral") {
+  return `
+    <section class="card tone-${tone}">
+      <h2>${escapeHtml(title)}</h2>
+      ${body}
+    </section>
+  `;
 }
 
 function buildPrintableReportHtml(analysis: AtsAnalysis) {
   const history = analysis.history_comparison;
 
   const score = Number(analysis.ats_score) || 0;
-  const tone = getScoreTone(score);
+  const tone = toneForScore(score);
+
+  const historyTone = history?.has_previous_scans
+    ? toneForChange(history.score_change_from_latest)
+    : "neutral";
 
   const historyHtml =
     history && history.has_previous_scans
       ? `
-      <section class="card">
+      <section class="card tone-${historyTone}">
         <h2>History comparison</h2>
 
         <div class="metrics">
@@ -214,15 +261,15 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
         <p>${escapeHtml(history.progress_summary || "No progress summary available.")}</p>
 
         <div class="split">
-          <div>
+          <div class="tone-${toneForPresence(history.improved_areas, "good", "neutral")}">
             <h3>Improved areas</h3>
             ${pdfList(history.improved_areas)}
           </div>
-          <div>
+          <div class="tone-${toneForPresence(history.repeated_issues, "warn", "good")}">
             <h3>Repeated issues</h3>
             ${pdfList(history.repeated_issues)}
           </div>
-          <div>
+          <div class="tone-${toneForPresence(history.new_issues, "bad", "good")}">
             <h3>New issues</h3>
             ${pdfList(history.new_issues)}
           </div>
@@ -230,7 +277,7 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
       </section>
     `
       : `
-      <section class="card">
+      <section class="card tone-neutral">
         <h2>History comparison</h2>
         <p class="empty">This is the first scan. Analyze again to compare improvements.</p>
       </section>
@@ -242,6 +289,12 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
 <head>
   <meta charset="utf-8" />
   <title>ATS Scan AI Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap"
+  />
   <style>
     @page { margin: 16mm 14mm; }
 
@@ -254,8 +307,18 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
       --surface-2: #f7f8fa;
       --accent: #2563eb;
       --green: #0f8a5f;
+      --amber: #b45309;
       --red: #d1332e;
+
+      --tone: #8b95a5;
+      --tone-soft: #eef1f5;
     }
+
+    .tone-good { --tone: #0f8a5f; --tone-soft: #e8f7f0; }
+    .tone-warn { --tone: #b45309; --tone-soft: #fdf3e4; }
+    .tone-bad { --tone: #d1332e; --tone-soft: #fdeeed; }
+    .tone-info { --tone: #2563eb; --tone-soft: #eff4ff; }
+    .tone-neutral { --tone: #626c7d; --tone-soft: #f2f4f7; }
 
     * { box-sizing: border-box; }
 
@@ -271,7 +334,7 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
       background: #fff;
     }
 
-    h1, h2, h3 { margin: 0; color: var(--ink); letter-spacing: -0.022em; font-weight: 640; }
+    h1, h2, h3 { margin: 0; color: var(--ink); letter-spacing: -0.022em; font-weight: 700; }
     p { margin: 0; }
 
     .masthead {
@@ -284,7 +347,7 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
     }
     .brand {
       font-size: 10px;
-      font-weight: 640;
+      font-weight: 700;
       letter-spacing: 0.11em;
       text-transform: uppercase;
       color: var(--accent);
@@ -300,47 +363,48 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
       margin: 20px 0;
       padding: 20px 22px;
       border: 1px solid var(--line);
+      border-left: 4px solid var(--tone);
       border-radius: 14px;
-      background: var(--surface-2);
+      background: var(--tone-soft);
       page-break-inside: avoid;
     }
     .score-figure { display: flex; align-items: baseline; gap: 3px; }
-    .score-figure strong { font-size: 46px; line-height: 1; letter-spacing: -0.04em; color: var(--ink); }
+    .score-figure strong { font-size: 46px; line-height: 1; letter-spacing: -0.04em; font-weight: 700; color: var(--tone); }
     .score-figure span { font-size: 13px; color: var(--ink-4); }
     .score-meter { flex: 1; }
     .score-label {
       display: flex;
       justify-content: space-between;
       font-size: 10px;
-      font-weight: 620;
+      font-weight: 700;
       letter-spacing: 0.09em;
       text-transform: uppercase;
-      color: var(--ink-4);
+      color: var(--tone);
       margin-bottom: 7px;
     }
+    .score-label .max { color: var(--ink-4); }
     .meter { height: 7px; border-radius: 999px; background: #e4e7ec; overflow: hidden; }
-    .meter span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
-    .good .meter span { background: var(--green); }
-    .weak .meter span { background: var(--red); }
+    .meter span { display: block; height: 100%; border-radius: inherit; background: var(--tone); }
     .score-caption { margin-top: 8px; font-size: 10.5px; color: var(--ink-4); }
 
     .card {
       margin: 12px 0;
       padding: 16px 18px;
       border: 1px solid var(--line);
+      border-left: 4px solid var(--tone);
       border-radius: 12px;
       background: #fff;
       page-break-inside: avoid;
     }
     .card h2 {
-      font-size: 10.5px;
-      font-weight: 640;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: 0.09em;
       text-transform: uppercase;
-      color: var(--ink-4);
+      color: var(--tone);
       margin-bottom: 10px;
     }
-    .card h3 { font-size: 11px; color: var(--ink-3); margin: 14px 0 6px; }
+    .card h3 { font-size: 11.5px; font-weight: 700; color: var(--tone); margin: 14px 0 6px; }
     .card p { font-size: 12px; color: var(--ink-2); }
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -358,9 +422,9 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: #c7ccd6;
+      background: var(--tone);
     }
-    .empty { font-size: 11.5px; color: var(--ink-4); }
+    .empty { font-size: 11.5px; font-weight: 560; color: var(--tone); }
 
     .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .metrics div {
@@ -372,11 +436,13 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
     .metrics span {
       display: block;
       font-size: 9.5px;
-      font-weight: 560;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: var(--ink-4);
       margin-bottom: 3px;
     }
-    .metrics strong { font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
+    .metrics strong { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink); }
     .metrics strong.positive { color: var(--green); }
     .metrics strong.negative { color: var(--red); }
     .metrics strong.neutral { color: var(--ink-3); }
@@ -400,7 +466,7 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
     <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
   </header>
 
-  <section class="score-block ${tone}">
+  <section class="score-block tone-${tone}">
     <div class="score-figure">
       <strong>${escapeHtml(score)}</strong>
       <span>/100</span>
@@ -409,7 +475,7 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
     <div class="score-meter">
       <div class="score-label">
         <span>ATS score</span>
-        <span>100</span>
+        <span class="max">100</span>
       </div>
 
       <div class="meter"><span style="width: ${Math.max(0, Math.min(100, score))}%"></span></div>
@@ -420,25 +486,22 @@ function buildPrintableReportHtml(analysis: AtsAnalysis) {
     </div>
   </section>
 
-  <section class="card">
-    <h2>Resume summary</h2>
-    <p>${escapeHtml(analysis.resume_summary)}</p>
-  </section>
+  ${pdfCard("Resume summary", `<p>${escapeHtml(analysis.resume_summary)}</p>`, "info")}
 
   ${historyHtml}
 
   <div class="grid">
-    <section class="card"><h2>Matched skills</h2>${pdfList(analysis.matched_skills)}</section>
-    <section class="card"><h2>Missing skills</h2>${pdfList(analysis.missing_skills)}</section>
-    <section class="card"><h2>Missing keywords</h2>${pdfList(analysis.missing_keywords)}</section>
-    <section class="card"><h2>Formatting issues</h2>${pdfList(analysis.formatting_issues)}</section>
-    <section class="card"><h2>Experience match</h2><p>${escapeHtml(analysis.experience_match)}</p></section>
-    <section class="card"><h2>Education match</h2><p>${escapeHtml(analysis.education_match)}</p></section>
+    ${pdfCard("Matched skills", pdfList(analysis.matched_skills), toneForStrengths(analysis.matched_skills))}
+    ${pdfCard("Missing skills", pdfList(analysis.missing_skills), toneForIssues(analysis.missing_skills))}
+    ${pdfCard("Missing keywords", pdfList(analysis.missing_keywords), toneForIssues(analysis.missing_keywords))}
+    ${pdfCard("Formatting issues", pdfList(analysis.formatting_issues), toneForIssues(analysis.formatting_issues))}
+    ${pdfCard("Experience match", `<p>${escapeHtml(analysis.experience_match)}</p>`, "info")}
+    ${pdfCard("Education match", `<p>${escapeHtml(analysis.education_match)}</p>`, "info")}
   </div>
 
-  <section class="card"><h2>Improvement suggestions</h2>${pdfList(analysis.improvement_suggestions)}</section>
-  <section class="card"><h2>Better bullet points</h2>${pdfList(analysis.better_bullet_points)}</section>
-  <section class="card"><h2>Final recommendation</h2><p>${escapeHtml(analysis.final_recommendation)}</p></section>
+  ${pdfCard("Improvement suggestions", pdfList(analysis.improvement_suggestions), "info")}
+  ${pdfCard("Better bullet points", pdfList(analysis.better_bullet_points), "info")}
+  ${pdfCard("Final recommendation", `<p>${escapeHtml(analysis.final_recommendation)}</p>`, tone)}
 
   <div class="footer">
     ATS Scan AI report. Use this as guidance and review your resume manually before applying.
