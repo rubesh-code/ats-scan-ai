@@ -1173,6 +1173,19 @@ export default function App() {
             </div>
           </section>
         </main>
+
+        <footer className="marketing-footer">
+          <div className="marketing-footer-inner">
+            <span>© {new Date().getFullYear()} ATS Scan AI</span>
+
+            <div className="marketing-footer-links">
+              <a href="#features">Features</a>
+              <a href="#how">How it works</a>
+              <a href="#pricing">Pricing</a>
+              <a href="#login">Login</a>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
