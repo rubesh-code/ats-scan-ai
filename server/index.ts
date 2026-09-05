@@ -885,20 +885,26 @@ function buildResumePdf(resume: RewrittenResume): Promise<Buffer> {
 
         const rowY = doc.y;
 
+        /*
+         * One continued run rather than two positioned blocks. Placing the
+         * value at a measured label offset breaks as soon as the label itself
+         * wraps: the value stays on the first line while the label spills onto
+         * a second, which then collides with the next row.
+         */
         if (group.label) {
-          const label = `${group.label}: `;
-
-          doc.font("Helvetica-Bold").fontSize(10).fillColor(INK);
-          const labelWidth = doc.widthOfString(label);
-
-          doc.text(label, left, rowY, { width: labelWidth, continued: false });
+          doc
+            .font("Helvetica-Bold")
+            .fontSize(10)
+            .fillColor(INK)
+            .text(`${group.label}: `, left, rowY, {
+              width: contentWidth,
+              continued: true,
+            });
 
           doc
             .font("Helvetica")
             .fillColor(MUTED)
-            .text(group.items.join(", "), left + labelWidth, rowY, {
-              width: contentWidth - labelWidth,
-            });
+            .text(group.items.join(", "), { width: contentWidth });
         } else {
           doc
             .font("Helvetica")
