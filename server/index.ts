@@ -191,6 +191,56 @@ async function sendOtpEmail(email: string, otp: string) {
   });
 }
 
+/*
+ * Provider-side failures (quota exhausted, bad API key, unverified sender) all
+ * mean the same thing to the person signing in: no code arrived. Their wording
+ * is also actively misleading here — SendGrid's "Maximum credits exceeded"
+ * reads as if the user ran out of scan credits.
+ */
+function isEmailDeliveryError(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    "maximum credits exceeded",
+    "authentication failed",
+    "invalid login",
+    "quota",
+    "rate limit",
+    "eauth",
+    "econnrefused",
+    "etimedout",
+    "esocket",
+    "451",
+    "421",
+    "550",
+    "553",
+    "not configured",
+  ].some((marker) => normalized.includes(marker));
+}
+
+async function verifyEmailTransport() {
+  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+  const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+
+  if (!smtpPass || !emailFrom) {
+    throw new Error("Email provider is not configured.");
+  }
+
+  const nodemailer = await import("nodemailer");
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.sendgrid.net",
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: String(process.env.SMTP_SECURE || "false").toLowerCase() === "true",
+    auth: {
+      user: process.env.SMTP_USER || "apikey",
+      pass: smtpPass,
+    },
+  });
+
+  await transporter.verify();
+}
+
 
 function signToken(user: AuthUser) {
   const secret = requireEnv("JWT_SECRET");
@@ -924,19 +974,43 @@ async function startServer() {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
     try {
-      const { error } = await db.from("otp_codes").insert([
-        {
-          email,
-          otp_hash: hashOtp(email, otp),
-          expires_at: expiresAt,
-          verified: false,
-          attempts: 0,
-        },
-      ]);
+      const { data: otpRow, error } = await db
+        .from("otp_codes")
+        .insert([
+          {
+            email,
+            otp_hash: hashOtp(email, otp),
+            expires_at: expiresAt,
+            verified: false,
+            attempts: 0,
+          },
+        ])
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      await sendOtpEmail(email, otp);
+      try {
+        await sendOtpEmail(email, otp);
+      } catch (sendError: unknown) {
+        // A code nobody received is only noise, and it would block the retry
+        // path by sitting at the top of the "latest unverified OTP" query.
+        if (otpRow?.id) {
+          await db.from("otp_codes").delete().eq("id", otpRow.id);
+        }
+
+        const detail = getErrorMessage(sendError);
+        console.error(`[OTP delivery failed] ${email}: ${detail}`);
+
+        if (isEmailDeliveryError(detail)) {
+          return res.status(502).json({
+            error:
+              "We could not send your login code right now. Please try again in a few minutes.",
+          });
+        }
+
+        throw sendError;
+      }
 
       return res.json({
         status: "ok",
@@ -946,6 +1020,25 @@ async function startServer() {
       console.error(error);
       return res.status(500).json({
         error: getErrorMessage(error),
+      });
+    }
+  });
+
+  app.get("/api/health/email", async (_req, res) => {
+    try {
+      await verifyEmailTransport();
+
+      return res.json({
+        status: "ok",
+        message: "Email provider reachable and accepting the credentials.",
+        host: process.env.SMTP_HOST || "smtp.sendgrid.net",
+      });
+    } catch (error: unknown) {
+      return res.status(503).json({
+        status: "error",
+        message: "Email provider rejected the connection.",
+        detail: getErrorMessage(error),
+        host: process.env.SMTP_HOST || "smtp.sendgrid.net",
       });
     }
   });
