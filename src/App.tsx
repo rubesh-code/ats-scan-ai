@@ -163,7 +163,7 @@ function escapeHtml(value: unknown) {
 
 function pdfList(items?: string[]) {
   if (!items || items.length === 0) {
-    return `<p class="muted">None found.</p>`;
+    return `<p class="empty">None found.</p>`;
   }
 
   return `
@@ -173,89 +173,276 @@ function pdfList(items?: string[]) {
   `;
 }
 
+function getScoreTone(score: number) {
+  if (score >= 80) return "good";
+  if (score >= 60) return "fair";
+  return "weak";
+}
+
 function buildPrintableReportHtml(analysis: AtsAnalysis) {
   const history = analysis.history_comparison;
+
+  const score = Number(analysis.ats_score) || 0;
+  const tone = getScoreTone(score);
 
   const historyHtml =
     history && history.has_previous_scans
       ? `
-      <section class="box">
-        <h2>History Comparison</h2>
+      <section class="card">
+        <h2>History comparison</h2>
+
         <div class="metrics">
-          <div><span>Latest Previous</span><strong>${escapeHtml(history.latest_previous_score ?? "N/A")}</strong></div>
-          <div><span>Previous Best</span><strong>${escapeHtml(history.previous_best_score ?? "N/A")}</strong></div>
-          <div><span>Change From Latest</span><strong>${escapeHtml(renderScoreChange(history.score_change_from_latest))}</strong></div>
-          <div><span>Change From Best</span><strong>${escapeHtml(renderScoreChange(history.score_change_from_best))}</strong></div>
+          <div>
+            <span>Latest previous</span>
+            <strong>${escapeHtml(history.latest_previous_score ?? "N/A")}</strong>
+          </div>
+          <div>
+            <span>Previous best</span>
+            <strong>${escapeHtml(history.previous_best_score ?? "N/A")}</strong>
+          </div>
+          <div>
+            <span>Change from latest</span>
+            <strong class="${getScoreChangeClass(history.score_change_from_latest)}">${escapeHtml(renderScoreChange(history.score_change_from_latest))}</strong>
+          </div>
+          <div>
+            <span>Change from best</span>
+            <strong class="${getScoreChangeClass(history.score_change_from_best)}">${escapeHtml(renderScoreChange(history.score_change_from_best))}</strong>
+          </div>
         </div>
-        <h3>Progress Summary</h3>
+
+        <h3>Progress summary</h3>
         <p>${escapeHtml(history.progress_summary || "No progress summary available.")}</p>
-        <h3>Improved Areas</h3>
-        ${pdfList(history.improved_areas)}
-        <h3>Repeated Issues</h3>
-        ${pdfList(history.repeated_issues)}
-        <h3>New Issues</h3>
-        ${pdfList(history.new_issues)}
+
+        <div class="split">
+          <div>
+            <h3>Improved areas</h3>
+            ${pdfList(history.improved_areas)}
+          </div>
+          <div>
+            <h3>Repeated issues</h3>
+            ${pdfList(history.repeated_issues)}
+          </div>
+          <div>
+            <h3>New issues</h3>
+            ${pdfList(history.new_issues)}
+          </div>
+        </div>
       </section>
     `
       : `
-      <section class="box">
-        <h2>History Comparison</h2>
-        <p class="muted">This is the first scan. Analyze again to compare improvements.</p>
+      <section class="card">
+        <h2>History comparison</h2>
+        <p class="empty">This is the first scan. Analyze again to compare improvements.</p>
       </section>
     `;
 
   return `
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>ATS Scan AI Report</title>
   <style>
-    body { margin: 0; padding: 32px; font-family: Arial, sans-serif; color: #0f172a; background: #fff; line-height: 1.55; }
-    .header { padding: 28px; border-radius: 18px; background: linear-gradient(135deg, #172554, #2563eb); color: white; margin-bottom: 24px; }
-    .header h1 { margin: 0 0 8px; font-size: 32px; }
-    .header p { margin: 0; color: #dbeafe; }
-    .score { padding: 22px; border-radius: 16px; background: #eff6ff; border: 1px solid #bfdbfe; margin-bottom: 20px; }
-    .score span { display: block; font-weight: 700; color: #1d4ed8; margin-bottom: 6px; }
-    .score strong { font-size: 48px; }
-    .box { border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin: 18px 0; background: #f8fafc; page-break-inside: avoid; }
-    h2 { margin: 0 0 14px; font-size: 22px; }
-    h3 { margin: 18px 0 8px; font-size: 17px; }
-    ul { margin-top: 8px; padding-left: 22px; }
-    li { margin-bottom: 6px; }
-    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-    .metrics div { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
-    .metrics span { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; }
-    .metrics strong { font-size: 24px; }
-    .muted { color: #64748b; }
-    .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; }
+    @page { margin: 16mm 14mm; }
+
+    :root {
+      --ink: #0f1420;
+      --ink-2: #333b4a;
+      --ink-3: #626c7d;
+      --ink-4: #8b95a5;
+      --line: #e7e9ee;
+      --surface-2: #f7f8fa;
+      --accent: #2563eb;
+      --green: #0f8a5f;
+      --red: #d1332e;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    body {
+      margin: 0;
+      padding: 28px 30px 24px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--ink-2);
+      background: #fff;
+    }
+
+    h1, h2, h3 { margin: 0; color: var(--ink); letter-spacing: -0.022em; font-weight: 640; }
+    p { margin: 0; }
+
+    .masthead {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      font-size: 10px;
+      font-weight: 640;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .masthead h1 { font-size: 23px; letter-spacing: -0.03em; }
+    .masthead .meta { font-size: 10.5px; color: var(--ink-4); text-align: right; }
+
+    .score-block {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin: 20px 0;
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-2);
+      page-break-inside: avoid;
+    }
+    .score-figure { display: flex; align-items: baseline; gap: 3px; }
+    .score-figure strong { font-size: 46px; line-height: 1; letter-spacing: -0.04em; color: var(--ink); }
+    .score-figure span { font-size: 13px; color: var(--ink-4); }
+    .score-meter { flex: 1; }
+    .score-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 620;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      margin-bottom: 7px;
+    }
+    .meter { height: 7px; border-radius: 999px; background: #e4e7ec; overflow: hidden; }
+    .meter span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+    .good .meter span { background: var(--green); }
+    .weak .meter span { background: var(--red); }
+    .score-caption { margin-top: 8px; font-size: 10.5px; color: var(--ink-4); }
+
+    .card {
+      margin: 12px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .card h2 {
+      font-size: 10.5px;
+      font-weight: 640;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      margin-bottom: 10px;
+    }
+    .card h3 { font-size: 11px; color: var(--ink-3); margin: 14px 0 6px; }
+    .card p { font-size: 12px; color: var(--ink-2); }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid .card { margin: 0; }
+    .split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .split h3 { margin-top: 12px; }
+
+    ul { margin: 0; padding: 0; list-style: none; }
+    li { position: relative; padding-left: 13px; margin-bottom: 5px; font-size: 12px; color: var(--ink-2); }
+    li::before {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 7px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #c7ccd6;
+    }
+    .empty { font-size: 11.5px; color: var(--ink-4); }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .metrics div {
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+    }
+    .metrics span {
+      display: block;
+      font-size: 9.5px;
+      font-weight: 560;
+      color: var(--ink-4);
+      margin-bottom: 3px;
+    }
+    .metrics strong { font-size: 20px; letter-spacing: -0.03em; color: var(--ink); }
+    .metrics strong.positive { color: var(--green); }
+    .metrics strong.negative { color: var(--red); }
+    .metrics strong.neutral { color: var(--ink-3); }
+
+    .footer {
+      margin-top: 20px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      font-size: 10px;
+      color: var(--ink-4);
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>ATS Scan AI Report</h1>
-    <p>Generated on ${escapeHtml(new Date().toLocaleString())}</p>
-  </div>
+  <header class="masthead">
+    <div>
+      <div class="brand">ATS Scan AI</div>
+      <h1>Resume ATS Report</h1>
+    </div>
 
-  <section class="score">
-    <span>ATS Score</span>
-    <strong>${escapeHtml(analysis.ats_score)}/100</strong>
+    <p class="meta">Generated on ${escapeHtml(new Date().toLocaleString())}</p>
+  </header>
+
+  <section class="score-block ${tone}">
+    <div class="score-figure">
+      <strong>${escapeHtml(score)}</strong>
+      <span>/100</span>
+    </div>
+
+    <div class="score-meter">
+      <div class="score-label">
+        <span>ATS score</span>
+        <span>100</span>
+      </div>
+
+      <div class="meter"><span style="width: ${Math.max(0, Math.min(100, score))}%"></span></div>
+
+      <p class="score-caption">
+        Measured against the job description or job type used for this scan.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Resume summary</h2>
+    <p>${escapeHtml(analysis.resume_summary)}</p>
   </section>
 
   ${historyHtml}
 
-  <section class="box"><h2>Resume Summary</h2><p>${escapeHtml(analysis.resume_summary)}</p></section>
-  <section class="box"><h2>Matched Skills</h2>${pdfList(analysis.matched_skills)}</section>
-  <section class="box"><h2>Missing Skills</h2>${pdfList(analysis.missing_skills)}</section>
-  <section class="box"><h2>Missing Keywords</h2>${pdfList(analysis.missing_keywords)}</section>
-  <section class="box"><h2>Experience Match</h2><p>${escapeHtml(analysis.experience_match)}</p></section>
-  <section class="box"><h2>Education Match</h2><p>${escapeHtml(analysis.education_match)}</p></section>
-  <section class="box"><h2>Formatting Issues</h2>${pdfList(analysis.formatting_issues)}</section>
-  <section class="box"><h2>Improvement Suggestions</h2>${pdfList(analysis.improvement_suggestions)}</section>
-  <section class="box"><h2>Better Bullet Points</h2>${pdfList(analysis.better_bullet_points)}</section>
-  <section class="box"><h2>Final Recommendation</h2><p>${escapeHtml(analysis.final_recommendation)}</p></section>
+  <div class="grid">
+    <section class="card"><h2>Matched skills</h2>${pdfList(analysis.matched_skills)}</section>
+    <section class="card"><h2>Missing skills</h2>${pdfList(analysis.missing_skills)}</section>
+    <section class="card"><h2>Missing keywords</h2>${pdfList(analysis.missing_keywords)}</section>
+    <section class="card"><h2>Formatting issues</h2>${pdfList(analysis.formatting_issues)}</section>
+    <section class="card"><h2>Experience match</h2><p>${escapeHtml(analysis.experience_match)}</p></section>
+    <section class="card"><h2>Education match</h2><p>${escapeHtml(analysis.education_match)}</p></section>
+  </div>
 
-  <div class="footer">ATS Scan AI report. Use this report as guidance and review manually before applying.</div>
+  <section class="card"><h2>Improvement suggestions</h2>${pdfList(analysis.improvement_suggestions)}</section>
+  <section class="card"><h2>Better bullet points</h2>${pdfList(analysis.better_bullet_points)}</section>
+  <section class="card"><h2>Final recommendation</h2><p>${escapeHtml(analysis.final_recommendation)}</p></section>
+
+  <div class="footer">
+    ATS Scan AI report. Use this as guidance and review your resume manually before applying.
+  </div>
 </body>
 </html>
 `;
