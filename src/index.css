@@ -2478,6 +2478,16 @@ textarea {
   border-color: var(--line-strong);
 }
 
+.scan-row.is-active {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.scan-row.is-active:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 .scan-file {
   min-width: 0;
   display: flex;

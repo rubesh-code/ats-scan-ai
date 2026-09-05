@@ -793,6 +793,23 @@ export default function App() {
     }
   }, [token]);
 
+  /*
+   * The report only lives in state, and the rewrite button only lives in the
+   * report. Without this, a refresh or a fresh login leaves a user with scans
+   * but no visible way back to them. Open the newest one by default; a fresh
+   * analysis or a history click has already set `analysis`, so this stays out
+   * of the way.
+   */
+  useEffect(() => {
+    if (analysis || scans.length === 0) return;
+
+    const latest = scans.find((scan) => scan.result_data);
+
+    if (latest?.result_data) {
+      showAnalysis(latest.result_data, latest.id);
+    }
+  }, [scans, analysis]);
+
   useEffect(() => {
     if (resendSeconds <= 0) return;
 
@@ -1893,7 +1910,8 @@ export default function App() {
                   <button
                     type="button"
                     key={scan.id}
-                    className="scan-row"
+                    className={`scan-row ${scan.id === activeScanId ? "is-active" : ""}`}
+                    title="Open this report"
                     onClick={() => scan.result_data && showAnalysis(scan.result_data, scan.id)}
                   >
                     <div className="scan-file">
