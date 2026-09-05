@@ -674,6 +674,294 @@ ${resumeText.slice(0, 60000)}
 `;
 }
 
+type RewrittenResume = ReturnType<typeof normalizeRewrittenResume>;
+
+function buildResumeFileName(resume: RewrittenResume) {
+  const base = (resume.full_name || "Improved Resume")
+    .replace(/[^a-zA-Z0-9 ]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 60);
+
+  return `${base || "Improved_Resume"}_ATS_Resume.pdf`;
+}
+
+/*
+ * Drawn as real text in a standard font, not a rasterised page: an ATS has to
+ * be able to extract every line back out of the PDF.
+ */
+function buildResumePdf(resume: RewrittenResume): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const PDFDocument = require("pdfkit");
+
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 46, bottom: 48, left: 46, right: 46 },
+      info: {
+        Title: `${resume.full_name || "Resume"} — Resume`,
+        Author: resume.full_name || "",
+      },
+    });
+
+    const chunks: Buffer[] = [];
+
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const INK = "#111111";
+    const MUTED = "#333333";
+    const SOFT = "#4a4a4a";
+
+    const left = doc.page.margins.left;
+    const contentWidth =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+    function bottomLimit() {
+      return doc.page.height - doc.page.margins.bottom;
+    }
+
+    function ensureSpace(needed: number) {
+      if (doc.y + needed > bottomLimit()) {
+        doc.addPage();
+      }
+    }
+
+    function sectionHeading(title: string) {
+      ensureSpace(52);
+
+      doc.y += 12;
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(9.5)
+        .fillColor(INK)
+        .text(title.toUpperCase(), left, doc.y, {
+          width: contentWidth,
+          characterSpacing: 0.9,
+        });
+
+      const ruleY = doc.y + 3;
+
+      doc
+        .moveTo(left, ruleY)
+        .lineTo(left + contentWidth, ruleY)
+        .lineWidth(0.8)
+        .strokeColor(INK)
+        .stroke();
+
+      doc.y = ruleY + 8;
+    }
+
+    function bulletLines(items: string[]) {
+      for (const item of items) {
+        ensureSpace(26);
+
+        const startY = doc.y;
+
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .fillColor(MUTED)
+          .text("•", left + 2, startY, { width: 10 });
+
+        doc.text(item, left + 14, startY, {
+          width: contentWidth - 14,
+          lineGap: 0.5,
+        });
+
+        doc.y += 3;
+      }
+    }
+
+    function entry(params: {
+      primary: string;
+      secondary?: string;
+      aside?: string;
+      bullets?: string[];
+    }) {
+      const { primary, secondary, aside, bullets } = params;
+
+      if (!primary && !secondary) return;
+
+      ensureSpace(64);
+
+      const asideWidth = aside ? 120 : 0;
+      const headY = doc.y;
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10.5)
+        .fillColor(INK)
+        .text(primary || "", left, headY, {
+          width: contentWidth - asideWidth - 10,
+        });
+
+      if (aside) {
+        doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .fillColor(SOFT)
+          .text(aside, left + contentWidth - asideWidth, headY, {
+            width: asideWidth,
+            align: "right",
+          });
+      }
+
+      doc.y = Math.max(doc.y, headY + 12);
+
+      if (secondary) {
+        doc
+          .font("Helvetica")
+          .fontSize(9.5)
+          .fillColor(SOFT)
+          .text(secondary, left, doc.y, { width: contentWidth });
+      }
+
+      if (bullets && bullets.length > 0) {
+        doc.y += 3;
+        bulletLines(bullets);
+      }
+
+      doc.y += 6;
+    }
+
+    // Header
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(20)
+      .fillColor(INK)
+      .text(resume.full_name || "Your Name", left, doc.y, {
+        width: contentWidth,
+      });
+
+    if (resume.headline) {
+      doc.y += 1;
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10.5)
+        .fillColor(MUTED)
+        .text(resume.headline, left, doc.y, { width: contentWidth });
+    }
+
+    const contactParts = [
+      resume.location,
+      resume.phone,
+      resume.email,
+      ...resume.links,
+    ].filter(Boolean);
+
+    if (contactParts.length > 0) {
+      doc.y += 3;
+      doc
+        .font("Helvetica")
+        .fontSize(9)
+        .fillColor(SOFT)
+        .text(contactParts.join("  •  "), left, doc.y, { width: contentWidth });
+    }
+
+    if (resume.summary) {
+      sectionHeading("Professional Summary");
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor(MUTED)
+        .text(resume.summary, left, doc.y, {
+          width: contentWidth,
+          align: "justify",
+          lineGap: 0.5,
+        });
+    }
+
+    const skillRows = resume.skill_groups.filter(
+      (group) => group.items.length > 0
+    );
+
+    if (skillRows.length > 0) {
+      sectionHeading("Skills");
+
+      for (const group of skillRows) {
+        ensureSpace(24);
+
+        const rowY = doc.y;
+
+        if (group.label) {
+          const label = `${group.label}: `;
+
+          doc.font("Helvetica-Bold").fontSize(10).fillColor(INK);
+          const labelWidth = doc.widthOfString(label);
+
+          doc.text(label, left, rowY, { width: labelWidth, continued: false });
+
+          doc
+            .font("Helvetica")
+            .fillColor(MUTED)
+            .text(group.items.join(", "), left + labelWidth, rowY, {
+              width: contentWidth - labelWidth,
+            });
+        } else {
+          doc
+            .font("Helvetica")
+            .fontSize(10)
+            .fillColor(MUTED)
+            .text(group.items.join(", "), left, rowY, { width: contentWidth });
+        }
+
+        doc.y += 3;
+      }
+    }
+
+    if (resume.experience.length > 0) {
+      sectionHeading("Experience");
+
+      for (const role of resume.experience) {
+        entry({
+          primary: role.role,
+          secondary: [role.company, role.location].filter(Boolean).join(" — "),
+          aside: role.period,
+          bullets: role.bullets,
+        });
+      }
+    }
+
+    if (resume.projects.length > 0) {
+      sectionHeading("Projects");
+
+      for (const project of resume.projects) {
+        entry({
+          primary: project.name,
+          aside: project.period,
+          bullets: project.bullets,
+        });
+      }
+    }
+
+    if (resume.education.length > 0) {
+      sectionHeading("Education");
+
+      for (const item of resume.education) {
+        entry({
+          primary: item.degree,
+          secondary: [item.institution, item.location].filter(Boolean).join(" — "),
+          aside: item.period,
+        });
+      }
+    }
+
+    if (resume.certifications.length > 0) {
+      sectionHeading("Certifications");
+      bulletLines(resume.certifications);
+    }
+
+    if (resume.achievements.length > 0) {
+      sectionHeading("Achievements");
+      bulletLines(resume.achievements);
+    }
+
+    doc.end();
+  });
+}
+
 async function parsePdf(buffer: Buffer) {
   const result = await pdfParse(buffer);
   return result.text || "";
@@ -1792,7 +2080,44 @@ Description: ${role.description || ""}`.trim();
           });
         }
 
+        if (
+          message.includes("Could not find the function") ||
+          message.includes("does not exist") ||
+          message.includes("schema cache")
+        ) {
+          return res.status(503).json({
+            error:
+              "Resume rewrites are not enabled yet. Run supabase/migrations/001_resume_rewrite_credit.sql.",
+          });
+        }
+
         throw spendError;
+      }
+
+      const fileName = buildResumeFileName(rewritten);
+
+      // Returned inline so the download does not depend on the history write.
+      const pdf = await buildResumePdf(rewritten);
+
+      const { data: generated, error: generatedError } = await db
+        .from("generated_resumes")
+        .insert([
+          {
+            user_id: req.user!.id,
+            scan_id: scan.id,
+            source_file_name: uploadedResume?.file_name || scan.filename,
+            file_name: fileName,
+            applied_suggestions: selectedSuggestions,
+            resume_data: rewritten,
+          },
+        ])
+        .select("id, file_name, created_at")
+        .single();
+
+      // The credit is already spent, so a history write failure must not lose
+      // the resume the user paid for: hand it back either way.
+      if (generatedError) {
+        console.error("[Generated resume history failed]", generatedError);
       }
 
       return res.json({
@@ -1802,8 +2127,72 @@ Description: ${role.description || ""}`.trim();
         applied_suggestions: selectedSuggestions,
         credits_used: 1,
         remaining_credits: remainingCredits ?? null,
+        generated_id: generated?.id ?? null,
+        file_name: fileName,
+        pdf_base64: pdf.toString("base64"),
         resume: rewritten,
       });
+    } catch (error: unknown) {
+      console.error(error);
+      return res.status(500).json({
+        error: getErrorMessage(error),
+      });
+    }
+  });
+
+  app.get("/api/resume/generated", authMiddleware, async (req, res) => {
+    if (!requireSupabase(res)) return;
+
+    const db = supabase! as any;
+
+    try {
+      const { data, error } = await db
+        .from("generated_resumes")
+        .select("id, scan_id, file_name, source_file_name, applied_suggestions, created_at")
+        .eq("user_id", req.user!.id)
+        .order("created_at", { ascending: false })
+        .limit(MAX_SCAN_HISTORY_PER_USER);
+
+      if (error) throw error;
+
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({
+        error: getErrorMessage(error),
+      });
+    }
+  });
+
+  // Rebuilt from the stored resume: re-downloading never costs another credit.
+  app.get("/api/resume/generated/:id/pdf", authMiddleware, async (req, res) => {
+    if (!requireSupabase(res)) return;
+
+    const db = supabase! as any;
+
+    try {
+      const { data: generated, error } = await db
+        .from("generated_resumes")
+        .select("file_name, resume_data")
+        .eq("id", req.params.id)
+        .eq("user_id", req.user!.id)
+        .single();
+
+      if (error || !generated) {
+        return res.status(404).json({
+          error: "Generated resume not found.",
+        });
+      }
+
+      const pdf = await buildResumePdf(generated.resume_data);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${generated.file_name || "resume.pdf"}"`
+      );
+      res.setHeader("Content-Length", String(pdf.length));
+
+      return res.end(pdf);
     } catch (error: unknown) {
       console.error(error);
       return res.status(500).json({

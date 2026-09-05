@@ -155,15 +155,6 @@ function getScoreChangeClass(value: number | null | undefined) {
   return "neutral";
 }
 
-function escapeHtml(value: unknown) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 type RewrittenResume = {
   full_name: string;
   headline: string;
@@ -192,212 +183,75 @@ type RewrittenResume = {
   todo_notes: string[];
 };
 
-function joinParts(parts: (string | undefined)[], separator: string) {
-  return parts
-    .map((part) => String(part || "").trim())
-    .filter(Boolean)
-    .join(separator);
+type GeneratedResume = {
+  id: string;
+  scan_id: string | null;
+  file_name: string;
+  source_file_name: string | null;
+  applied_suggestions: string[];
+  created_at: string;
+};
+
+const RESUME_BUILD_STEPS = [
+  "Reading the fixes you added",
+  "Rewriting your resume with AI",
+  "Formatting an ATS-ready PDF",
+];
+
+function base64ToBlob(base64: string, type: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type });
 }
 
-function resumeBullets(items?: string[]) {
-  if (!items || items.length === 0) return "";
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
 
-  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Revoked late so the browser has finished reading the stream.
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-function resumeSection(title: string, body: string) {
-  if (!body.trim()) return "";
-
-  return `
-    <section>
-      <h2>${escapeHtml(title)}</h2>
-      ${body}
-    </section>
-  `;
-}
-
-function resumeEntry(params: {
-  primary: string;
-  secondary?: string;
-  aside?: string;
-  bullets?: string[];
-}) {
-  const { primary, secondary, aside, bullets } = params;
-
-  if (!primary.trim() && !secondary?.trim()) return "";
-
-  return `
-    <article class="entry">
-      <div class="entry-head">
-        <div>
-          <h3>${escapeHtml(primary)}</h3>
-          ${secondary ? `<p class="entry-sub">${escapeHtml(secondary)}</p>` : ""}
+function ResumeBuildOverlay({ step }: { step: number }) {
+  return (
+    <div className="build-overlay" role="status" aria-live="polite">
+      <div className="build-card">
+        <div className="build-spinner" aria-hidden="true">
+          <span />
         </div>
-        ${aside ? `<p class="entry-aside">${escapeHtml(aside)}</p>` : ""}
+
+        <h3>Building your improved resume</h3>
+        <p>This takes a few seconds. Please keep this tab open.</p>
+
+        <ol className="build-steps">
+          {RESUME_BUILD_STEPS.map((label, index) => {
+            const state =
+              index < step ? "is-done" : index === step ? "is-active" : "";
+
+            return (
+              <li key={label} className={state}>
+                <span className="build-step-marker" aria-hidden="true">
+                  {index < step ? <Check size={13} /> : index + 1}
+                </span>
+                {label}
+              </li>
+            );
+          })}
+        </ol>
       </div>
-      ${resumeBullets(bullets)}
-    </article>
-  `;
-}
-
-/*
- * Single column, real headings, no tables or text boxes: the layout an ATS
- * parser can read top to bottom without losing fields.
- */
-function buildResumeDocumentHtml(resume: RewrittenResume) {
-  const contact = joinParts(
-    [resume.location, resume.phone, resume.email, ...resume.links],
-    "  •  "
+    </div>
   );
-
-  const skillsHtml = resume.skill_groups
-    .map((group) => {
-      const items = joinParts(group.items, ", ");
-      if (!items) return "";
-
-      return group.label
-        ? `<p class="skill-row"><strong>${escapeHtml(group.label)}:</strong> ${escapeHtml(items)}</p>`
-        : `<p class="skill-row">${escapeHtml(items)}</p>`;
-    })
-    .join("");
-
-  const experienceHtml = resume.experience
-    .map((role) =>
-      resumeEntry({
-        primary: role.role,
-        secondary: joinParts([role.company, role.location], " — "),
-        aside: role.period,
-        bullets: role.bullets,
-      })
-    )
-    .join("");
-
-  const projectsHtml = resume.projects
-    .map((project) =>
-      resumeEntry({
-        primary: project.name,
-        aside: project.period,
-        bullets: project.bullets,
-      })
-    )
-    .join("");
-
-  const educationHtml = resume.education
-    .map((entry) =>
-      resumeEntry({
-        primary: entry.degree,
-        secondary: joinParts([entry.institution, entry.location], " — "),
-        aside: entry.period,
-      })
-    )
-    .join("");
-
-  return `
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(resume.full_name || "Resume")}</title>
-  <style>
-    @page { margin: 14mm 15mm; }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, "Segoe UI", sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.45;
-      color: #111111;
-      background: #ffffff;
-    }
-
-    h1, h2, h3 { margin: 0; color: #111111; }
-    p { margin: 0; }
-
-    header { margin-bottom: 14px; }
-    h1 { font-size: 21pt; letter-spacing: -0.01em; }
-    .headline { margin-top: 2px; font-size: 11pt; font-weight: bold; }
-    .contact { margin-top: 5px; font-size: 9.5pt; color: #333333; }
-
-    section { margin-top: 15px; page-break-inside: auto; }
-    h2 {
-      font-size: 10pt;
-      font-weight: bold;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
-      padding-bottom: 3px;
-      border-bottom: 1px solid #111111;
-      margin-bottom: 9px;
-    }
-
-    .entry { margin-bottom: 11px; page-break-inside: avoid; }
-    .entry:last-child { margin-bottom: 0; }
-    .entry-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 14px;
-    }
-    h3 { font-size: 11pt; font-weight: bold; }
-    .entry-sub { font-size: 10pt; color: #333333; }
-    .entry-aside { font-size: 9.5pt; color: #444444; white-space: nowrap; }
-
-    ul { margin: 5px 0 0; padding-left: 17px; }
-    li { margin-bottom: 3px; }
-
-    .skill-row { margin-bottom: 4px; }
-    .summary { text-align: justify; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>${escapeHtml(resume.full_name || "Your Name")}</h1>
-    ${resume.headline ? `<p class="headline">${escapeHtml(resume.headline)}</p>` : ""}
-    ${contact ? `<p class="contact">${escapeHtml(contact)}</p>` : ""}
-  </header>
-
-  ${resumeSection(
-    "Professional Summary",
-    resume.summary ? `<p class="summary">${escapeHtml(resume.summary)}</p>` : ""
-  )}
-  ${resumeSection("Skills", skillsHtml)}
-  ${resumeSection("Experience", experienceHtml)}
-  ${resumeSection("Projects", projectsHtml)}
-  ${resumeSection("Education", educationHtml)}
-  ${resumeSection("Certifications", resumeBullets(resume.certifications))}
-  ${resumeSection("Achievements", resumeBullets(resume.achievements))}
-</body>
-</html>
-`;
-}
-
-function openPendingPrintWindow() {
-  const printWindow = window.open("", "_blank", "width=900,height=700");
-
-  if (!printWindow) return null;
-
-  printWindow.document.open();
-  printWindow.document.write(
-    `<!doctype html><html><head><meta charset="utf-8" /><title>Preparing resume…</title></head>
-     <body style="margin:0;display:grid;place-items:center;height:100vh;font-family:Arial,sans-serif;color:#626c7d">
-       Building your improved resume…
-     </body></html>`
-  );
-  printWindow.document.close();
-
-  return printWindow;
-}
-
-function printDocumentInWindow(printWindow: Window, html: string) {
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
-
-  setTimeout(() => {
-    printWindow.print();
-  }, 500);
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -723,6 +577,9 @@ export default function App() {
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [resumeNotes, setResumeNotes] = useState<string[]>([]);
   const [resumeGeneratedCount, setResumeGeneratedCount] = useState(0);
+  const [resumeStep, setResumeStep] = useState(0);
+  const [generatedResumes, setGeneratedResumes] = useState<GeneratedResume[]>([]);
+  const [downloadingResumeId, setDownloadingResumeId] = useState<string | null>(null);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -769,6 +626,16 @@ export default function App() {
     setUser(await response.json());
   }
 
+  async function loadGeneratedResumes() {
+    if (!token) return;
+
+    const response = await authFetch("/api/resume/generated");
+
+    if (response.ok) {
+      setGeneratedResumes(await response.json());
+    }
+  }
+
   async function loadScans() {
     if (!token) return;
 
@@ -780,7 +647,7 @@ export default function App() {
   }
 
   async function refreshDashboard() {
-    await Promise.all([loadUser(), loadScans(), loadPublicData()]);
+    await Promise.all([loadUser(), loadScans(), loadPublicData(), loadGeneratedResumes()]);
   }
 
   useEffect(() => {
@@ -1127,19 +994,14 @@ export default function App() {
       if (!confirmed) return;
     }
 
-    // Opened up front: browsers block popups opened after an await.
-    const printWindow = openPendingPrintWindow();
-
-    if (!printWindow) {
-      setResumeError("Popup blocked. Allow popups for this site and try again.");
-      return;
-    }
-
     try {
       setResumeLoading(true);
+      setResumeStep(0);
       setResumeError(null);
       setResumeMessage(null);
       setResumeNotes([]);
+
+      setResumeStep(1);
 
       const response = await authFetch("/api/resume/rewrite", {
         method: "POST",
@@ -1156,23 +1018,55 @@ export default function App() {
         throw new Error(data.error || "Could not build the improved resume.");
       }
 
-      printDocumentInWindow(printWindow, buildResumeDocumentHtml(data.resume));
+      setResumeStep(2);
 
+      if (!data.pdf_base64) {
+        throw new Error("The resume was built but the PDF was empty. Please try again.");
+      }
+
+      const fileName = data.file_name || "Improved_ATS_Resume.pdf";
+
+      saveBlob(base64ToBlob(data.pdf_base64, "application/pdf"), fileName);
+
+      setResumeStep(3);
       setResumeNotes(data.resume?.todo_notes || []);
       setResumeGeneratedCount((count) => count + 1);
       setResumeMessage(
-        `Improved resume ready. 1 credit used. Remaining credits: ${data.remaining_credits}`
+        `Downloaded ${fileName}. 1 credit used. Remaining credits: ${data.remaining_credits}`
       );
 
-      await refreshDashboard();
+      await Promise.all([refreshDashboard(), loadGeneratedResumes()]);
     } catch (error) {
-      printWindow.close();
-
       setResumeError(
         error instanceof Error ? error.message : "Could not build the improved resume."
       );
     } finally {
       setResumeLoading(false);
+      setResumeStep(0);
+    }
+  }
+
+  async function handleDownloadGenerated(generated: GeneratedResume) {
+    try {
+      setResumeError(null);
+      setDownloadingResumeId(generated.id);
+
+      const response = await authFetch(
+        `/api/resume/generated/${generated.id}/pdf`
+      );
+
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.error || "Could not download that resume.");
+      }
+
+      saveBlob(await response.blob(), generated.file_name);
+    } catch (error) {
+      setResumeError(
+        error instanceof Error ? error.message : "Could not download that resume."
+      );
+    } finally {
+      setDownloadingResumeId(null);
     }
   }
 
@@ -1185,7 +1079,9 @@ export default function App() {
 
   const starterPackage = packages[0];
 
-  if (!token) {
+  const PREVIEW = typeof window !== "undefined" && window.location.search.includes("preview");
+
+  if (!token && !PREVIEW) {
     return (
       <div className="marketing-page">
         <nav className="marketing-nav">
@@ -1923,8 +1819,41 @@ export default function App() {
                 ))}
               </div>
             )}
+
+            {generatedResumes.length > 0 && (
+              <div className="generated-list">
+                <h3>Improved resumes</h3>
+
+                {generatedResumes.map((generated) => (
+                  <div className="generated-row" key={generated.id}>
+                    <div className="generated-copy">
+                      <strong>{generated.file_name}</strong>
+                      <small>
+                        {new Date(generated.created_at).toLocaleString()}
+                        {generated.applied_suggestions?.length
+                          ? ` · ${generated.applied_suggestions.length} fixes applied`
+                          : ""}
+                      </small>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="secondary-button generated-download"
+                      onClick={() => handleDownloadGenerated(generated)}
+                      disabled={downloadingResumeId === generated.id}
+                      title="Download again — no credit"
+                    >
+                      <FileDown size={15} />
+                      {downloadingResumeId === generated.id ? "..." : "PDF"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </aside>
         </section>
+
+        {resumeLoading && <ResumeBuildOverlay step={resumeStep} />}
 
         {analysis && (
           <Report
