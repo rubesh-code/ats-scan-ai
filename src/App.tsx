@@ -128,6 +128,16 @@ function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+// Keep these in step with the breakpoints in index.css.
+// At this width the sidebar becomes an off-canvas drawer.
+const DRAWER_NAV_QUERY = "(max-width: 1020px)";
+// At this width the report drops below the scan history panel.
+const STACKED_WORKSPACE_QUERY = "(max-width: 1180px)";
+
+function matchesMedia(query: string) {
+  return typeof window !== "undefined" && window.matchMedia(query).matches;
+}
+
 function renderList(items?: string[]) {
   if (!items || items.length === 0) {
     return <p className="muted">None found.</p>;
@@ -584,6 +594,7 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [reportScrollPending, setReportScrollPending] = useState(false);
 
   function authHeaders() {
     return {
@@ -676,6 +687,21 @@ export default function App() {
       showAnalysis(latest.result_data, latest.id);
     }
   }, [scans, analysis]);
+
+  /*
+   * When the workspace stacks, a fresh report renders below the history panel,
+   * out of sight. Scroll to it once the dashboard refresh has re-rendered, so
+   * the new history row above it can't push it back down after the scroll.
+   */
+  useEffect(() => {
+    if (!reportScrollPending) return;
+
+    setReportScrollPending(false);
+
+    if (matchesMedia(STACKED_WORKSPACE_QUERY)) {
+      scrollToSection("reports");
+    }
+  }, [reportScrollPending]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -947,9 +973,21 @@ export default function App() {
         throw new Error(data.error || "Resume analysis failed.");
       }
 
-      setAnalysis(data.analysis);
+      // The resume rewrite is keyed by scan id, so the new report must carry the
+      // new scan's id. Never keep the previously open scan's id: without a valid
+      // id the rewrite stays disabled until the scan is opened from history.
+      const newScanId =
+        typeof data.scan?.id === "string" && data.scan.id.trim() ? data.scan.id : null;
+
+      showAnalysis(data.analysis, newScanId);
+
+      if (!newScanId) {
+        setResumeError("Open this scan from your history to build an improved resume.");
+      }
+
       setAnalysisMessage(`Resume analyzed. 1 credit used. Remaining credits: ${data.remaining_credits}`);
       await refreshDashboard();
+      setReportScrollPending(true);
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : "Resume analysis failed.");
     } finally {
@@ -1068,6 +1106,13 @@ export default function App() {
     } finally {
       setDownloadingResumeId(null);
     }
+  }
+
+  // The sidebar credit card is off-screen in drawer mode, so point at the
+  // credit pack card in the main column, where payment messages also appear.
+  function closeDrawerAndShowCredits() {
+    setMobileSidebarOpen(false);
+    scrollToSection("credit-pack");
   }
 
   function handleAnalyzeEnterKey(event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>) {
@@ -1485,7 +1530,20 @@ export default function App() {
           <a href="#analyze" onClick={() => setMobileSidebarOpen(false)}><FileSearch size={19} />Analyze</a>
           <a href="#reports" onClick={() => setMobileSidebarOpen(false)}><BarChart3 size={19} />Reports</a>
           <a href="#history" onClick={() => setMobileSidebarOpen(false)}><History size={19} />History</a>
-          <a href="#credits" onClick={() => setMobileSidebarOpen(false)}><Crown size={19} />Pricing</a>
+          <a
+            href="#credits"
+            onClick={(event) => {
+              if (matchesMedia(DRAWER_NAV_QUERY)) {
+                event.preventDefault();
+                closeDrawerAndShowCredits();
+                return;
+              }
+
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <Crown size={19} />Pricing
+          </a>
         </nav>
 
         <div className="modern-credit-card" id="credits">
@@ -1499,7 +1557,14 @@ export default function App() {
           </div>
           <button
             type="button"
-            onClick={() => starterPackage && handleBuyCredits(starterPackage)}
+            onClick={() => {
+              if (!starterPackage) return;
+
+              // Close the drawer first so checkout and its messages aren't hidden behind it.
+              if (matchesMedia(DRAWER_NAV_QUERY)) closeDrawerAndShowCredits();
+
+              handleBuyCredits(starterPackage);
+            }}
             disabled={!starterPackage || paymentLoading}
           >
             <CreditCard size={18} />
@@ -1638,7 +1703,10 @@ export default function App() {
             <TrendingUp className="modern-stat-trend" size={28} />
           </article>
 
-          <article className="stat-card modern-stat-card stat-gold modern-credit-pack-card">
+          <article
+            className="stat-card modern-stat-card stat-gold modern-credit-pack-card"
+            id="credit-pack"
+          >
             <div className="modern-stat-icon"><Crown size={25} /></div>
             <div className="modern-stat-copy">
               <span>Credit Pack</span>
